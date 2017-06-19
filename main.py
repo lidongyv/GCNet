@@ -40,9 +40,11 @@ flags.DEFINE_integer('context_frames', 2, '# of frames before predictions.')
 flags.DEFINE_string('model', '','model path for pretrained model')
 flags.DEFINE_integer('batch_size', 32, 'batch size for training')
 flags.DEFINE_float('learning_rate', 0.001,'the base learning rate of the generator', 'validation data')
-flags.DEFINE_string('vdata','',)
-def main(unused_args):
+flags.DEFINE_string('vdata','', 'validation data')
 
+
+def main(unused_args):
+	limages,rimages,gimages=input_fn(FLAGS.mode)
 
 
 if __name__ == '__main__':
