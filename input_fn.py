@@ -26,4 +26,16 @@ IMG_WIDTH = 64
 IMG_HEIGHT = 64
 
 def get_input(mode=0):
-	
+"""creat input data and ground truth data for network
+Args:
+	the mode is training or prediction
+Return:
+	three matrix for left images, right images, ground truth images
+"""
+	lfilenames=gfile.Glob(os.path.join(FLAGS.data_dir,'/left/','*.png'))
+	rflilenames=gfile.Glob(os.path.join(FLAGS.data_data,'/right/','*.png'))
+	gfilenames=gfile.Glob(os.path.join(FLAGS.data_data,'/disparity/','*.png'))
+	if not lfilenames or not not lfilenames or not gfilenames:
+    	raise RuntimeError('No data files found.')
+    index=len(lfilenames)
+    
