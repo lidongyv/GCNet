@@ -14,6 +14,7 @@ from tensorflow.python.platform import flags
 from tensorflow.python.platform import gfile
 import cv2
 
+import python_pfm
 FLAGS=flags.FLAGS
 
 # Original image dimensions
@@ -34,7 +35,7 @@ Return:
 """
 	lfilenames=gfile.Glob(os.path.join(FLAGS.data_dir,'/left/','*.png'))
 	rflilenames=gfile.Glob(os.path.join(FLAGS.data_data,'/right/','*.png'))
-	gfilenames=gfile.Glob(os.path.join(FLAGS.data_data,'/disparity/','*.png'))
+	gfilenames=gfile.Glob(os.path.join(FLAGS.data_data,'/disparity/','*.pfm'))
 	if not lfilenames or not not lfilenames or not gfilenames:
     	raise RuntimeError('No data files found.')
     index=len(lfilenames)
