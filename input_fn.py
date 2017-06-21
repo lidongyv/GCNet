@@ -33,10 +33,11 @@ Args:
 Return:
 	three matrix for left images, right images, ground truth images
 """
-	lfilenames=gfile.Glob(os.path.join(FLAGS.data_dir,'/left/','*.png'))
-	rflilenames=gfile.Glob(os.path.join(FLAGS.data_data,'/right/','*.png'))
-	gfilenames=gfile.Glob(os.path.join(FLAGS.data_data,'/disparity/','*.pfm'))
-	if not lfilenames or not not lfilenames or not gfilenames:
-    	raise RuntimeError('No data files found.')
+    olfilenames=gfile.Glob(os.path.join(FLAGS.data_dir,'*','left','*.png'))
+    orflilenames=gfile.Glob(os.path.join(FLAGS.data_data,'*','right','*.png'))
+    glfilenames=gfile.Glob(os.path.join(FLAGS.data_data,'*','left','*.pfm'))
+    glfilenames=gfile.Glob(os.path.join(FLAGS.data_data,'*','right','*.pfm'))
+    if not lfilenames or not not lfilenames or not gfilenames:
+        raise RuntimeError('No data files found.')
     index=len(lfilenames)
     
