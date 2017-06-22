@@ -49,7 +49,7 @@ Return:
     limage=tf.image.decode_png(limagev)
     key,rimagev=reader.read(orimages)
     rimage=tf.image.decode_png(rimagev)
-
+    
 
 
 
