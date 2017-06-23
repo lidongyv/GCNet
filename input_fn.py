@@ -27,19 +27,19 @@ IMG_WIDTH = 64
 IMG_HEIGHT = 64
 
 def get_input(mode=0):
-"""creat input data and ground truth data for network
-Args:
-	the mode is training or prediction
-Return:
-	three matrix for left images, right images, ground truth images
-"""
+    """creat input data and ground truth data for network
+    Args:
+    	the mode is training or prediction
+    Return:
+    	three matrix for left images, right images, ground truth images
+    """
     olfilenames=gfile.Glob(os.path.join(FLAGS.data_dir,'*','left','*.png'))
     orflilenames=gfile.Glob(os.path.join(FLAGS.data_data,'*','right','*.png'))
     glfilenames=gfile.Glob(os.path.join(FLAGS.data_data,'*','left','*.pfm'))
     grfilenames=gfile.Glob(os.path.join(FLAGS.data_data,'*','right','*.pfm'))
-    if not lfilenames or not not lfilenames or not gfilenames:
+    if not olfilenames or not not olfilenames or not glfilenames:
         raise RuntimeError('No data files found.')
-    index=len(lfilenames)
+    index=len(olfilenames)
     olimages=tf.train.string_input_producer(olfilenames,shuffle=False)
     orimages=tf.train.string_input_producer(orflilenames,shuffle=False)
     gldisparity=tf.train.string_input_producer(glfilenames,shuffle=False)
@@ -49,6 +49,7 @@ Return:
     limage=tf.image.decode_png(limagev)
     key,rimagev=reader.read(orimages)
     rimage=tf.image.decode_png(rimagev)
+    
     
 
 
