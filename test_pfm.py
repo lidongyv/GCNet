@@ -16,7 +16,6 @@ import cv2
 gfilenames=gfile.Glob(os.path.join(r'D:\stereo dataset\Stereo Matching\disparity\family_x2\left','*.pfm'))
 a=readPFM(gfilenames[1])
 b=np.floor(a[0])
-c=cv2.imread(r'D:\stereo dataset\Stereo Matching\frames_cleanpass\35mm_focallength\scene_backwards\fast\left\0001.png')
 win = cv2.namedWindow('test win', flags=0)
 cv2.imshow('test win', b.astype(np.uint8))
 cv2.waitKey(0)  

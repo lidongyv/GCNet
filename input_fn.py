@@ -47,8 +47,13 @@ def get_input(mode=0):
     reader=tf.WholeFileReader()
     key,limagev=reader.read(olimages)
     limage=tf.image.decode_png(limagev)
+    limage.set_shape([540,960,3])
     key,rimagev=reader.read(orimages)
     rimage=tf.image.decode_png(rimagev)
+    rimage.set_shape([540,960,3])
+    
+    input_batch,ground_batch=tf.train.shuffle_batch([[limage,rimage],[]],batch_size=FLAGS.batch_size,capacity=index/FLAGS.batch_size,min_after_dequeue=100)
+    return input_batch,ground_truth
     
     
 

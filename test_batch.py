@@ -13,14 +13,13 @@ from tensorflow.python.platform import flags
 from tensorflow.python.platform import gfile
 import cv2
 
-glfilenames=gfile.Glob(os.path.join(r'D:\stereo dataset\Stereo Matching\disparity','*','left','*.pfm'))
-gldisparity=tf.train.string_input_producer(glfilenames[1:10],shuffle=False)
+olfilenames=gfile.Glob(os.path.join(r'D:\stereo dataset\Stereo Matching\frames_cleanpass','*','left','*.png'))
+olimages=tf.train.string_input_producer(olfilenames[1:10],shuffle=False)
 reader=tf.WholeFileReader()
-key,value=reader.read(gldisparity)
-disparity=tf.decode_raw(value,out_type=tf.uint8)
-#images=tf.image.decode_png(value)
-#images.set_shape([540,960,3])
-#input_batch,labels=tf.train.shuffle_batch([[images,images],[key,key]],batch_size=3,capacity=2,min_after_dequeue=1)
+key,value=reader.read(olimages)
+images=tf.image.decode_png(value)
+images.set_shape([540,960,3])
+input_batch,labels=tf.train.shuffle_batch([[images,images],[key,key]],batch_size=3,capacity=2,min_after_dequeue=1)
 epochs=1
 init_op = tf.global_variables_initializer()
 with tf.Session() as sess:
@@ -29,9 +28,9 @@ with tf.Session() as sess:
     sess.run(init_op)
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(coord=coord)
-    a=disparity.eval()
+    a=key.eval()
     for i in range(3) :
-        print(key.eval())
+        print(labels[i][0].eval())
     # Retrieve a single instance:
     #image= images.eval()
     #win = cv2.namedWindow('test win'+str(i), flags=0)
