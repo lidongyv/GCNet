@@ -13,7 +13,7 @@ from python_pfm import *
 from tensorflow.python.platform import flags
 from tensorflow.python.platform import gfile
 import cv2
-gfilenames=gfile.Glob(os.path.join(r'D:\stereo dataset\Stereo Matching\disparity\family_x2\left','*.pfm'))
+gfilenames=gfile.Glob(os.path.join(r'D:\stereo dataset\Stereo Matching\disparity','*.pfm'))
 a=readPFM(gfilenames[1])
 b=np.floor(a[0])
 win = cv2.namedWindow('test win', flags=0)

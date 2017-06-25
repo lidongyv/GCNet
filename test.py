@@ -17,7 +17,8 @@ glfilenames=gfile.Glob(os.path.join(r'D:\stereo dataset\Stereo Matching\disparit
 gldisparity=tf.train.string_input_producer(glfilenames[1:10],shuffle=False)
 reader=tf.WholeFileReader()
 key,value=reader.read(gldisparity)
-disparity=tf.decode_raw(value,out_type=tf.uint8)
+disparity=tf.decode_raw(value,out_type=tf.float64)
+
 #images=tf.image.decode_png(value)
 #images.set_shape([540,960,3])
 #input_batch,labels=tf.train.shuffle_batch([[images,images],[key,key]],batch_size=3,capacity=2,min_after_dequeue=1)

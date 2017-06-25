@@ -47,7 +47,7 @@ def writePFM(file, image, scale=1):
 
     if image.dtype.name != 'float32':
         raise Exception('Image dtype must be float32.')
-      
+    """  
     image = np.flipud(image)  
 
     if len(image.shape) == 3 and image.shape[2] == 3: # color image
@@ -66,6 +66,6 @@ def writePFM(file, image, scale=1):
         scale = -scale
 
     file.write('%f\n' % scale)
-
+    """
     image.tofile(file)
 
