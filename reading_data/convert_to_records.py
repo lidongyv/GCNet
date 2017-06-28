@@ -65,10 +65,10 @@ def convert_to(data_set, name):
   writer.close()
 
 def read_data_sets(data_path):
-    ilfilenames=gfile.Glob(os.path.join(data_path,r'data\TEST\C','*left','*.png'))
-    irfilenames=gfile.Glob(os.path.join(data_path,r'data\TEST\C','*right','*.png'))
-    glfilenames=gfile.Glob(os.path.join(data_path,r'groundtruth\TEST\C','*left','*.pfm'))
-    grfilenames=gfile.Glob(os.path.join(data_path,r'groundtruth\TEST\C','*right','*.pfm'))
+    ilfilenames=gfile.Glob(os.path.join(data_path,r'data','*left','*.png'))
+    irfilenames=gfile.Glob(os.path.join(data_path,r'data','*right','*.png'))
+    glfilenames=gfile.Glob(os.path.join(data_path,r'groundtruth','*left','*.pfm'))
+    grfilenames=gfile.Glob(os.path.join(data_path,r'groundtruth','*right','*.pfm'))
     image,disparity=[[],[]],[[],[]]
     for i in range(len(ilfilenames)):
         image[0].append(cv2.imread(ilfilenames[i]))
@@ -80,9 +80,9 @@ def read_data_sets(data_path):
 
 
 print('C3')
-data_sets=read_data_sets(r'D:\stereo dataset\Stereo Matching\test_data')
+data_sets=read_data_sets(r'D:\stereo dataset\Stereo Matching\tmp_data')
   # Convert to Examples and write the result to TFRecords.
-convert_to(data_sets, 'test_data_C')
+convert_to(data_sets, 'tmp_data')
   #convert_to(data_sets.validation, 'validation')
   #convert_to(data_sets.test, 'test')
 

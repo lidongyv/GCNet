@@ -7,11 +7,10 @@ Created on Sun Jun 19 15:51:20 2017
 import tensorflow as tf 
 import cv2
 import numpy as np 
-from input_fn import *
 import argparse
 from tensorflow.python.platform import app
 from tensorflow.python.platform import flags
-
+from input_fn import *
 # How often to record tensorboard summaries.
 SUMMARY_INTERVAL = 40
 
@@ -26,7 +25,7 @@ DATA_DIR = 'push/push_train'
 
 # local output directory
 OUT_DIR = '/tmp/data'
-
+"""
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('mode',0,'0:prediction, 1:training with existing model, 2:training with new model')
@@ -39,13 +38,31 @@ flags.DEFINE_integer('sequence_length', 10,'sequence length, including context f
 flags.DEFINE_integer('context_frames', 2, '# of frames before predictions.')
 flags.DEFINE_string('model', '','model path for pretrained model')
 flags.DEFINE_integer('batch_size', 32, 'batch size for training')
-flags.DEFINE_float('learning_rate', 0.001,'the base learning rate of the generator', 'validation data')
+flags.DEFINE_float('learning_rate', 0.001,'the base learning rate of the generator')
 flags.DEFINE_string('vdata','', 'validation data')
 
 
 def main(unused_args):
-	limages,rimages,gimages=input_fn(FLAGS.mode)
+	images,disparities=get_input(FLAGS.mode)
 
 
 if __name__ == '__main__':
   app.run()
+ """
+images,disparities=get_input(1) 
+init_op = tf.global_variables_initializer()
+with tf.Session() as sess:
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(coord=coord)
+    image=images.eval()
+    disparitiy=disparities.eval()
+    coord.request_stop()
+    coord.join(threads)
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
