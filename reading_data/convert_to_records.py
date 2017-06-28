@@ -39,42 +39,50 @@ def convert_to(data_set, name):
   """Converts a dataset to tfrecords."""
   images = data_set['data']
   labels = data_set['label']
-  num_examples = len(images)
+  num_examples = len(images[0])
   names=data_set['name']
 
-  rows = images[1].shape[0]
-  cols = images[1].shape[1]
-  depth = images[1].shape[2]
+  rows = images[0][0].shape[0]
+  cols = images[0][0].shape[1]
+  depth = images[0][0].shape[2]
 
-  filename = os.path.join(r'D:\stereo dataset\Stereo Matching\testpfm', name + '.tfrecords')
+  filename = os.path.join(r'D:\SceneFlow', name + '.tfrecords')
   print('Writing', filename)
   writer = tf.python_io.TFRecordWriter(filename)
   for index in range(num_examples):
-    image_raw = images[index].tostring()
-    label_raw=labels[index].tostring()
+    image_left_raw = images[0][index].tostring()
+    image_right_raw=images[1][index].tostring()
+    label_left_raw=labels[0][index].tostring()
+    label_right_raw=labels[1][index].tostring()
     name_raw=np.array(names[index]).tostring()
     example = tf.train.Example(features=tf.train.Features(feature={
-        'label_raw':  _bytes_feature(label_raw),
-        'name_raw':  _bytes_feature(name_raw),
-        'image_raw': _bytes_feature(image_raw)}))
+        'image_left_raw':  _bytes_feature(image_left_raw),
+        'image_right_raw':  _bytes_feature(image_right_raw),
+        'label_left_raw':  _bytes_feature(label_left_raw),
+        'label_right_raw':  _bytes_feature(label_right_raw),
+        'name_raw':  _bytes_feature(name_raw)}))
     writer.write(example.SerializeToString())
   writer.close()
 
 def read_data_sets(data_path):
-    ifilenames=gfile.Glob(os.path.join(data_path,'*.png'))
-    gfilenames=gfile.Glob(os.path.join(data_path,'*.pfm'))
-    image,disparity=[],[]
-    for i in range(len(ifilenames)):
-        image.append(cv2.imread(ifilenames[i]))
-    for i in range(len(ifilenames)):
-        disparity.append(readPFM(gfilenames[i]))
-    return {'data':image,'label':disparity,'name':ifilenames}
+    ilfilenames=gfile.Glob(os.path.join(data_path,r'data\C3','*left','*.png'))
+    irfilenames=gfile.Glob(os.path.join(data_path,r'data\C3','*right','*.png'))
+    glfilenames=gfile.Glob(os.path.join(data_path,r'groundtruth\C3','*left','*.pfm'))
+    grfilenames=gfile.Glob(os.path.join(data_path,r'groundtruth\C3','*right','*.pfm'))
+    image,disparity=[[],[]],[[],[]]
+    for i in range(len(ilfilenames)):
+        image[0].append(cv2.imread(ilfilenames[i]))
+        image[1].append(cv2.imread(irfilenames[i]))
+    for i in range(len(ilfilenames)):
+        disparity[0].append(readPFM(glfilenames[i]))
+        disparity[1].append(readPFM(grfilenames[i]))
+    return {'data':image,'label':disparity,'name':ilfilenames}
 
 
-
-data_sets=read_data_sets(r'D:\stereo dataset\Stereo Matching\testpfm')
+print('C3')
+data_sets=read_data_sets(r'D:\stereo dataset\Stereo Matching\train_data')
   # Convert to Examples and write the result to TFRecords.
-convert_to(data_sets, 'test')
+convert_to(data_sets, 'scene_flow_data_C3')
   #convert_to(data_sets.validation, 'validation')
   #convert_to(data_sets.test, 'test')
 
