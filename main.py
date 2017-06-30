@@ -49,7 +49,9 @@ def main(unused_args):
 if __name__ == '__main__':
   app.run()
  """
+#get input data
 images,disparities=get_input(1) 
+#E2ENet=E2EModel(images,disparities)
 init_op = tf.global_variables_initializer()
 with tf.Session() as sess:
     coord = tf.train.Coordinator()

@@ -47,6 +47,7 @@ ldisparity=tf.reshape(ldisparity,[ORIGINAL_WIDTH,ORIGINAL_HEIGHT])
 
 rdisparity.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT)
 rdisparity=tf.reshape(rdisparity,[ORIGINAL_WIDTH,ORIGINAL_HEIGHT])
+[input_batch,disaprity_batch]=tf.train.shuffle_batch([[limage,rimage],[ldisparity,rdisparity]],batch_size=6,capacity=5,min_after_dequeue=1)
 init_op = tf.global_variables_initializer()
 with tf.Session() as sess:
     #for i in range(3) :
@@ -54,7 +55,7 @@ with tf.Session() as sess:
     sess.run(init_op)
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(coord=coord)
-    a=ldisparity.eval()
+    a=input_batch.eval()
     # Retrieve a single instance:
     #image= images.eval()
     #win = cv2.namedWindow('test win'+str(i), flags=0)
