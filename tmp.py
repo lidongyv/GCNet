@@ -1,13 +1,30 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jun 26 21:21:40 2017
+Created on Fri Jun 30 11:17:51 2017
 
 @author: lidong
 """
-from tensorflow.python.platform import gfile
-import os
-path=r'D:\stereo dataset\Stereo Matching\train_data\data\1'
-ifilenames=gfile.Glob(os.path.join(path,'*.png'))
-data_path=r'D:\stereo dataset\Stereo Matching\train_data'
-ilfilenames=gfile.Glob(os.path.join(data_path,r'data\1','*left','*.png'))
-irfilenames=gfile.Glob(os.path.join(data_path,r'data\1','*right','*.png'))
+import tensorflow as tf
+# Creates a graph.
+def d2(input):
+    return 1
+c = []
+for d in ['/gpu:2', '/gpu:3']:
+  with tf.device(d):
+    a = tf.constant([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=[2, 3])
+    b = tf.constant([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=[3, 2])
+    c.append(tf.matmul(a, b))
+with tf.device('/cpu:0'):
+  sum = tf.add_n(c)
+# Creates a session with log_device_placement set to True.
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+# Runs the op.
+with tf.variable_scope("foo") as foo_scope:
+    v = tf.get_variable("v", [1])
+with tf.variable_scope(foo_scope):
+    w = tf.get_variable("w", [1])
+with tf.variable_scope(foo_scope, reuse=True):
+    v1 = tf.get_variable("v", [1])
+    w1 = tf.get_variable("w", [1])
+assert v1 is v
+assert w1 is w
