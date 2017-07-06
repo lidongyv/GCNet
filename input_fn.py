@@ -55,17 +55,17 @@ def get_input(mode=0):
     #reshape the data
     limage.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT*COLOR_CHAN)
     limage=tf.reshape(limage,[ORIGINAL_WIDTH,ORIGINAL_HEIGHT,COLOR_CHAN])
-
+    limage=tf.to_float(limage)/255
     rimage.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT*COLOR_CHAN)
     rimage=tf.reshape(rimage,[ORIGINAL_WIDTH,ORIGINAL_HEIGHT,COLOR_CHAN])
-
+    rimage=tf.to_float(rimage)/255
     ldisparity.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT)
     ldisparity=tf.reshape(ldisparity,[ORIGINAL_WIDTH,ORIGINAL_HEIGHT])
 
     rdisparity.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT)
     rdisparity=tf.reshape(rdisparity,[ORIGINAL_WIDTH,ORIGINAL_HEIGHT])
 
-    [input_batch,disaprity_batch]=tf.train.shuffle_batch([[limage,rimage],[ldisparity,rdisparity]],batch_size=6,capacity=5,min_after_dequeue=1)
+    [input_batch,disaprity_batch]=tf.train.shuffle_batch([[limage,rimage],[ldisparity,rdisparity]],batch_size=1,capacity=5,min_after_dequeue=1)
     return input_batch,disaprity_batch
     
     

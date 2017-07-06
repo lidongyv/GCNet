@@ -28,6 +28,7 @@ features=tf.parse_single_example(
 image = tf.decode_raw(features['image_raw'], tf.uint8)
 image.set_shape([540*960*3])
 image=tf.reshape(image,[540,960,3])
+image=tf.to_float(image)/255
 label=tf.decode_raw(features['label_raw'], tf.float32)
 label.set_shape([540*960])
 label=tf.reshape(label,[540,960])
@@ -47,7 +48,7 @@ with tf.Session() as sess:
     a,b,c=[],[],[]
     for i in range(18):
         #a.append(data[1].eval())
-        b.append(data[2].eval())
+        b.append(data[0].eval())
         #c.append(name.eval().decode('UTF-8'))
 
     # Retrieve a single instance:
