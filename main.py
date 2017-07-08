@@ -49,18 +49,32 @@ def main(unused_args):
 if __name__ == '__main__':
   app.run()
  """
-#get input data
-images,disparities=get_input(1) 
-#E2ENet=E2EModel(images,disparities)
-init_op = tf.global_variables_initializer()
-with tf.Session() as sess:
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(coord=coord)
-    image=images.eval()
-    disparitiy=disparities.eval()
-    coord.request_stop()
-    coord.join(threads)
- 
+def train():
+	#get input data
+	images,disparities=get_input(1) 
+	#E2ENet=E2EModel(images,disparities)
+	init_op = tf.global_variables_initializer()
+	with tf.Session() as sess:
+	    coord = tf.train.Coordinator()
+	    threads = tf.train.start_queue_runners(coord=coord)
+	    image=images.eval()
+	    disparitiy=disparities.eval()
+	    coord.request_stop()
+	    coord.join(threads)
+def evaluate():
+		images,disparities=get_input(1) 
+	#E2ENet=E2EModel(images,disparities)
+	init_op = tf.global_variables_initializer()
+	with tf.Session() as sess:
+	    coord = tf.train.Coordinator()
+	    threads = tf.train.start_queue_runners(coord=coord)
+	    image=images.eval()
+	    disparitiy=disparities.eval()
+	    coord.request_stop()
+	    coord.join(threads)
+train()
+
+	 
  
  
  
