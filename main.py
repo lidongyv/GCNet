@@ -11,6 +11,7 @@ import argparse
 from tensorflow.python.platform import app
 from tensorflow.python.platform import flags
 from input_fn import *
+import model as whole_model
 # How often to record tensorboard summaries.
 SUMMARY_INTERVAL = 40
 
@@ -49,9 +50,58 @@ def main(unused_args):
 if __name__ == '__main__':
   app.run()
  """
+
 def train():
 	#get input data
 	images,disparities=get_input(1) 
+	model=whole_model.E2EModel(images,disparities,'train')
+	model.build_graph()
+
+
+	summary_hook = tf.train.SummarySaverHook(
+      save_steps=100,
+      output_dir=r'D:\GC-Base\output',
+      summary_op=tf.summary.merge([model.summaries,
+      							tf.summary.scalar('lpre',model.lprecision),tf.summary.scalar('rpre',model.rprecison)]))
+	logging_hook = tf.train.LoggingTensorHook(
+      tensors={'step': model.global_step,
+               'loss': model.loss,
+               'lprecision': model.lpre,
+               'rprecision': model.rpre },
+      every_n_iter=100)
+	class _LearningRateSetterHook(tf.train.SessionRunHook):
+		"""Sets learning_rate based on global step."""
+
+		def begin(self):
+			self._lrn_rate = 0.0001
+
+		def before_run(self, run_context):
+			return tf.train.SessionRunArgs(
+			model.global_step,  # Asks for global step value.
+			feed_dict={model.lrn_rate: self._lrn_rate})  # Sets learning rate
+
+		def after_run(self, run_context, run_values):
+			train_step = run_values.results
+			if train_step < 40000:
+				self._lrn_rate = 0.0001
+			elif train_step < 60000:
+				self._lrn_rate = 0.0001
+			elif train_step < 80000:
+				self._lrn_rate = 0.0001
+			else:
+				self._lrn_rate = 0.0001
+	with tf.train.MonitoredTrainingSession(
+      checkpoint_dir=r'D:\GC-Base\log',
+      hooks=[logging_hook, _LearningRateSetterHook()],
+      chief_only_hooks=[summary_hook],
+      # Since we provide a SummarySaverHook, we need to disable default
+      # SummarySaverHook. To do that we set save_summaries_steps to 0.
+      save_summaries_steps=0,
+      config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=True)) as mon_sess:
+		print('running'+str(model.global_step))
+		while not mon_sess.should_stop():
+			mon_sess.run(model.train_op)
+	"""
 	#E2ENet=E2EModel(images,disparities)
 	init_op = tf.global_variables_initializer()
 	with tf.Session() as sess:
@@ -61,7 +111,10 @@ def train():
 	    disparitiy=disparities.eval()
 	    coord.request_stop()
 	    coord.join(threads)
+	"""
 def evaluate():
+	
+	"""
 		images,disparities=get_input(1) 
 	#E2ENet=E2EModel(images,disparities)
 	init_op = tf.global_variables_initializer()
@@ -72,6 +125,8 @@ def evaluate():
 	    disparitiy=disparities.eval()
 	    coord.request_stop()
 	    coord.join(threads)
+train()
+"""
 train()
 
 	 
