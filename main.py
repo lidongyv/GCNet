@@ -52,6 +52,7 @@ if __name__ == '__main__':
  """
 
 def train():
+	tf.device('/gpu:3')
 	#get input data
 	images,disparities=get_input(1) 
 	model=whole_model.E2EModel(images,disparities,'train')

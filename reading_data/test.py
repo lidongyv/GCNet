@@ -45,16 +45,17 @@ with tf.Session() as sess:
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(coord=coord)
     a,b,c=[],[],[]
+    d=data[0].eval()
     for i in range(18):
         #a.append(data[1].eval())
-        b.append(data[2].eval())
+        b.append(data[1].eval())
         #c.append(name.eval().decode('UTF-8'))
 
     # Retrieve a single instance:
     #image= images.eval()
-    #win = cv2.namedWindow('test win'+str(i), flags=0)
-    #cv2.imshow('test win'+str(i), image.astype(np.uint8))
-         
+    win = cv2.namedWindow('test win'+str(i), flags=0)
+    cv2.imshow('test win'+str(i),d.astype(np.uint8))
+    cv2.waitKey()  
     coord.request_stop()
     coord.join(threads)
  

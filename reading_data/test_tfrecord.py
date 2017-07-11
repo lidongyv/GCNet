@@ -48,13 +48,14 @@ with tf.Session() as sess:
     a,b,c=[],[],[]
     for i in range(18):
         #a.append(data[1].eval())
-        b.append(data[0].eval())
+        b.append(data[1].eval())
         #c.append(name.eval().decode('UTF-8'))
 
     # Retrieve a single instance:
     #image= images.eval()
-    #win = cv2.namedWindow('test win'+str(i), flags=0)
-    #cv2.imshow('test win'+str(i), image.astype(np.uint8))
+    win = cv2.namedWindow('test win'+str(i), flags=0)
+    cv2.imshow('test win'+str(i), image.eval().astype(np.uint8))
+    cv2.waitKey()
          
     coord.request_stop()
     coord.join(threads)

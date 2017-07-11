@@ -15,9 +15,9 @@ from tensorflow.python.platform import flags
 from tensorflow.python.training import moving_averages
 
 
-ORIGINAL_WIDTH = 540
-ORIGINAL_HEIGHT = 960
-COLOR_CHAN = 3
+IMG_WIDTH = 512
+IMG_HEIGHT = 256
+IMG_DISPARITY = 192
 
 class E2EModel(object):
 	def __init__(self,
@@ -191,15 +191,9 @@ class E2EModel(object):
 				out=self._sia_conv(image,kernel,stride)
 			#resnet 2d conv part
 			for i in range(8):
-				if i>5:
-					with tf.device('/gpu:1'):
-						with tf.variable_scope('res_uint_%d' % i):
-							out=self._residual_cnn(out)
-				else:
-					with tf.device('/gpu:0'):
-						with tf.variable_scope('res_uint_%d' % i):
-							out=self._residual_cnn(out)
-		with tf.device('/gpu:1'):
+				with tf.variable_scope('res_uint_%d' % i):
+					out=self._residual_cnn(out)
+		with tf.device('/gpu:2'):
 			out=self._batch_norm('conv17_bn',out)
 			out=self._relu(out,0)
 			with tf.variable_scope('conv18'):
@@ -246,7 +240,7 @@ class E2EModel(object):
 				kernel=[3,3,3,64,64]
 				stride=[1,2,2,2,1]
 				out=self._conv3d('conv27',out26,kernel,stride)
-		with tf.device('/gpu:2'):
+		#with tf.device('/gpu:1'):
 			with tf.variable_scope('conv28'):
 				kernel=[3,3,3,64,64]
 				stride=[1,1,1,1,1]
@@ -270,50 +264,50 @@ class E2EModel(object):
 			with tf.variable_scope('de_conv33'):
 				kernel=[3,3,3,64,128]
 				stride=[1,2,2,2,1]
-				output=tf.constant([1,np.ceil(192/16).astype('int32'),np.ceil(540/16).astype('int32'),np.ceil(960/16).astype('int32'),64])
+				output=tf.constant([1,np.ceil(IMG_DISPARITY/16).astype('int32'),np.ceil(IMG_HEIGHT/16).astype('int32'),np.ceil(IMG_WIDTH/16).astype('int32'),64])
 				out=self._deconv3d('de_conv33',out,kernel,output,stride)
 				out+=out29
 			with tf.variable_scope('de_conv34'):
 				kernel=[3,3,3,64,64]
 				stride=[1,2,2,2,1]
-				output=tf.constant([1,np.ceil(192/8).astype('int32'),np.ceil(540/8).astype('int32'),np.ceil(960/8).astype('int32'),64])
+				output=tf.constant([1,np.ceil(IMG_DISPARITY/8).astype('int32'),np.ceil(IMG_HEIGHT/8).astype('int32'),np.ceil(IMG_WIDTH/8).astype('int32'),64])
 				out=self._deconv3d('de_conv34',out,kernel,output,stride)
 				out+=out26
 			with tf.variable_scope('de_conv35'):
 				kernel=[3,3,3,64,64]
 				stride=[1,2,2,2,1]
-				output=tf.constant([1,np.ceil(192/4).astype('int32'),np.ceil(540/4).astype('int32'),np.ceil(960/4).astype('int32'),64])
+				output=tf.constant([1,np.ceil(IMG_DISPARITY/4).astype('int32'),np.ceil(IMG_HEIGHT/4).astype('int32'),np.ceil(IMG_WIDTH/4).astype('int32'),64])
 				out=self._deconv3d('de_conv35',out,kernel,output,stride)
 				out+=out23
 			with tf.variable_scope('de_conv36'):
 				kernel=[3,3,3,32,64]
 				stride=[1,2,2,2,1]
-				output=tf.constant([1,np.ceil(192/2).astype('int32'),np.ceil(540/2).astype('int32'),np.ceil(960/2).astype('int32'),32])
+				output=tf.constant([1,np.ceil(IMG_DISPARITY/2).astype('int32'),np.ceil(IMG_HEIGHT/2).astype('int32'),np.ceil(IMG_WIDTH/2).astype('int32'),32])
 				out=self._deconv3d('de_conv36',out,kernel,output,stride)
 				out+=out20
 			with tf.variable_scope('de_conv37'):
 				kernel=[3,3,3,1,32]
 				stride=[1,2,2,2,1]
 				n=kernel[0]*kernel[1]*kernel[2]*kernel[3]
-				output=tf.constant([1,192,540,960,1])
+				output=tf.constant([1,IMG_DISPARITY,IMG_HEIGHT,IMG_WIDTH,1])
 				weights=tf.get_variable('weights',kernel,tf.float32,initializer=tf.random_normal_initializer(stddev=np.sqrt(2.0/n)))
 				out=tf.nn.conv3d_transpose(out,weights,output,strides=stride,padding='SAME')
 			return out
 
 	"""
 	def _softargmin(self,disparity):
-		disparity=-tf.reshape(disparity,[192])
+		disparity=-tf.reshape(disparity,[IMG_DISPARITY])
 		probability=tf.nn.softmax(disparity)
-		d=tf.range(192,dtype=tf.float32)
-		sum=tf.reduce_sum(d*probability)/192
+		d=tf.range(IMG_DISPARITY,dtype=tf.float32)
+		sum=tf.reduce_sum(d*probability)/IMG_DISPARITY
 		return sum
 	"""
 	def _todisparity(self,volume):
 		with tf.variable_scope('soft_argmin'):
-			d=np.arange(192,dtype=np.float32)
-			d=np.reshape(d,[192,1,1])
+			d=np.arange(IMG_DISPARITY,dtype=np.float32)
+			d=np.reshape(d,[IMG_DISPARITY,1,1])
 			d=tf.convert_to_tensor(d)
-			disparity=tf.reshape(volume,[192,540,960])
+			disparity=tf.reshape(volume,[IMG_DISPARITY,IMG_HEIGHT,IMG_WIDTH])
 			probability=tf.nn.softmax(-disparity,dim=0)
 			disparities=tf.reduce_sum(d*probability,0)
 		return disparities
@@ -321,18 +315,18 @@ class E2EModel(object):
 	def _create_volume(self,linput,rinput):
 		#create the cost volume from b*w*h*f to b*d*w*h*2*f
 		#using split and concat to achieve the translation
-		with tf.device('/gpu:3'):
+		with tf.device('/gpu:2'):
 			lvolume=[]
-			for i in range(96):
-				splits=tf.split(rinput,[270-i,i],axis=1)
-				rsplits=tf.concat([splits[1],splits[0]],axis=1)
+			for i in range(int(IMG_DISPARITY/2)):
+				splits=tf.split(rinput,[int(IMG_WIDTH/2-i),i],axis=2)
+				rsplits=tf.concat([splits[1],splits[0]],axis=2)
 				single_dis=tf.concat([linput,rsplits],3)
 				lvolume.append(single_dis)
 			lvol=tf.stack(lvolume,axis=0)
 			rvolume=[]
-			for i in range(96):
-				splits=tf.split(linput,[i,270-i],axis=1)
-				lsplits=tf.concat([splits[1],splits[0]],axis=1)
+			for i in range(int(IMG_DISPARITY/2)):
+				splits=tf.split(linput,[i,int(IMG_WIDTH/2-i)],axis=2)
+				lsplits=tf.concat([splits[1],splits[0]],axis=2)
 				single_dis=tf.concat([rinput,lsplits],3)
 				rvolume.append(single_dis)
 			rvol=tf.stack(rvolume,axis=0)
@@ -340,19 +334,19 @@ class E2EModel(object):
 
 	def _loss(self,lpre,rpre):
 		ground=tf.split(self.labels,num_or_size_splits=2,axis=1)
-		lground=tf.reshape(ground[0],[540,960])
-		rground=tf.reshape(ground[1],[540,960])
+		lground=tf.reshape(ground[0],[IMG_HEIGHT,IMG_WIDTH])
+		rground=tf.reshape(ground[1],[IMG_HEIGHT,IMG_WIDTH])
 		sum=tf.abs(lpre-lground)
-		loss=tf.reduce_sum(sum)/(540*960)
+		loss=tf.reduce_sum(sum)/(IMG_HEIGHT*IMG_WIDTH)
 		self.lprecision=loss
 		sum=tf.abs(rpre-rground)
-		self.rprecison=tf.reduce_sum(sum)/(540*960)
-		loss=loss+tf.reduce_sum(sum)/(540*960)
+		self.rprecison=tf.reduce_sum(sum)/(IMG_HEIGHT*IMG_WIDTH)
+		loss=loss+tf.reduce_sum(sum)/(IMG_HEIGHT*IMG_WIDTH)
 		return loss
 	def _build_model(self):	
 		images=tf.split(self.image,num_or_size_splits=2, axis=1)
-		limage=tf.reshape(images[0],[1,540,960,3])
-		rimage=tf.reshape(images[1],[1,540,960,3])
+		limage=tf.reshape(images[0],[1,IMG_HEIGHT,IMG_WIDTH,3])
+		rimage=tf.reshape(images[1],[1,IMG_HEIGHT,IMG_WIDTH,3])
 		#residual siamese convolution
 		with tf.variable_scope('siamese_conv') as scope:
 			left=self.siamese_cnn(limage)
@@ -372,8 +366,8 @@ class E2EModel(object):
 			ldisparities=self._todisparity(left)
 			scope.reuse_variables()
 			rdisparities=self._todisparity(right)
-			#ldisparities=tf.get_variable('ldisparity',[540,960],tf.float32,initializer=tf.random_normal_initializer())
-			#rdisparities=tf.get_variable('rdisparity',[540,960],tf.float32,initializer=tf.random_normal_initializer())
+			#ldisparities=tf.get_variable('ldisparity',[IMG_HEIGHT,IMG_WIDTH],tf.float32,initializer=tf.random_normal_initializer())
+			#rdisparities=tf.get_variable('rdisparity',[IMG_HEIGHT,IMG_WIDTH],tf.float32,initializer=tf.random_normal_initializer())
 		self.lpre=ldisparities
 		self.rpre=rdisparities
 		self.loss=self._loss(ldisparities,rdisparities)
