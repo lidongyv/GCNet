@@ -52,7 +52,7 @@ if __name__ == '__main__':
  """
 
 def train():
-	tf.device('/gpu:3')
+	tf.device('/gpu:0')
 	#get input data
 	images,disparities=get_input(1) 
 	model=whole_model.E2EModel(images,disparities,'train')
@@ -103,6 +103,8 @@ def train():
 		while not mon_sess.should_stop():
 			mon_sess.run(model.op)
 			print('running'+str(model.global_step.eval(session=mon_sess)))
+			#b=model.grads
+			#print(len(b))
 			#print(model.grads[1].eval(session=mon_sess))
 	"""
 	#E2ENet=E2EModel(images,disparities)

@@ -203,7 +203,7 @@ class E2EModel(object):
 				out=self._sia_conv(out,kernel,stride)
 		return out
 	def _3d_cnn(self,input):
-		"""
+		
 		with tf.device('/gpu:2'):
 			with tf.variable_scope('conv19'):
 				kernel=[3,3,3,64,32]
@@ -281,7 +281,6 @@ class E2EModel(object):
 				output=tf.constant([1,np.ceil(IMG_DISPARITY/4).astype('int32'),np.ceil(IMG_HEIGHT/4).astype('int32'),np.ceil(IMG_WIDTH/4).astype('int32'),64])
 				out=self._deconv3d('de_conv35',out,kernel,output,stride)
 				out+=out23
-		with tf.device('/gpu:3'):
 			
 			with tf.variable_scope('de_conv36'):
 				kernel=[3,3,3,32,64]
@@ -298,16 +297,18 @@ class E2EModel(object):
 				weights=tf.get_variable('weights',kernel,tf.float32,initializer=tf.random_normal_initializer(stddev=np.sqrt(2.0/n)))
 				out=tf.nn.conv3d_transpose(out,weights,output,strides=stride,padding='SAME')
 
+		
 		"""
-		with tf.device('/gpu:3'):
+		with tf.device('/gpu:0'):
 			with tf.variable_scope('conv19'):
 				kernel=[3,3,3,64,32]
 				stride=[1,1,1,1,1]
-				out=self._conv3d('conv19',input,kernel,stride)
+				out1=self._conv3d('conv19',input,kernel,stride)
 			with tf.variable_scope('conv20'):
 				kernel=[3,3,3,32,32]
 				stride=[1,2,2,2,1]
-				out20=self._conv3d('conv20',out,kernel,stride)
+				out20=self._conv3d('conv20',out1,kernel,stride)
+
 			
 			with tf.variable_scope('de_conv36'):
 				kernel=[3,3,3,32,32]
@@ -316,6 +317,7 @@ class E2EModel(object):
 				output=tf.constant([1,np.ceil(IMG_DISPARITY/2).astype('int32'),np.ceil(IMG_HEIGHT/2).astype('int32'),np.ceil(IMG_WIDTH/2).astype('int32'),32])
 				weights=tf.get_variable('weights',kernel,tf.float32,initializer=tf.random_normal_initializer(stddev=np.sqrt(2.0/n)))
 				out=tf.nn.conv3d_transpose(out20,weights,output,strides=stride,padding='SAME')
+			
 			with tf.variable_scope('de_conv37'):
 				kernel=[3,3,3,1,32]
 				stride=[1,2,2,2,1]
@@ -323,6 +325,7 @@ class E2EModel(object):
 				output=tf.constant([1,IMG_DISPARITY,IMG_HEIGHT,IMG_WIDTH,1])
 				weights=tf.get_variable('weights',kernel,tf.float32,initializer=tf.random_normal_initializer(stddev=np.sqrt(2.0/n)))
 				out=tf.nn.conv3d_transpose(out,weights,output,strides=stride,padding='SAME')
+		"""
 		return out
 
 	"""
@@ -407,12 +410,17 @@ class E2EModel(object):
 		tf.summary.scalar('loss',self.loss)
 	def _build_train_op(self):
 		"""Build training specific ops for the graph."""
-		with tf.device('/gpu:2'):
+		with tf.device('/gpu:1'):
 			self.lrn_rate = tf.constant(0.0001, tf.float32)
 			tf.summary.scalar('learning_rate', self.lrn_rate)
 
 			trainable_variables = tf.trainable_variables()
 			grads = tf.gradients(self.loss, trainable_variables)
+		with tf.device('/gpuL:1'):
+			var1=trainable_variables[0:50]
+			grad1=grad[0:50]
+		with tf.device('/gpuL:3'):
+			grad2=grad[50:107]
 		with tf.device('/gpu:1'):
 			optimizer = tf.train.RMSPropOptimizer(
 				self.lrn_rate,
@@ -420,7 +428,7 @@ class E2EModel(object):
 				momentum=0.9,
 				epsilon=1.0)
 			apply_op = optimizer.apply_gradients(
-				zip(grads, trainable_variables),
+				zip(grad1, var1),
 				global_step=self.global_step, name='train_step')
 			self.op=apply_op
 			train_ops = [apply_op] + self._extra_train_ops
