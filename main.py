@@ -101,7 +101,9 @@ def train():
       config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=True)) as mon_sess:
 		print('running'+str(model.global_step))
 		while not mon_sess.should_stop():
-			mon_sess.run(model.train_op)
+			mon_sess.run(model.op)
+			print('running'+str(model.global_step.eval(session=mon_sess)))
+			#print(model.grads[1].eval(session=mon_sess))
 	"""
 	#E2ENet=E2EModel(images,disparities)
 	init_op = tf.global_variables_initializer()
