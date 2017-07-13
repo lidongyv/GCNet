@@ -99,10 +99,20 @@ def train():
       # SummarySaverHook. To do that we set save_summaries_steps to 0.
       save_summaries_steps=0,
       config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=True)) as mon_sess:
-		print('running'+str(model.global_step))
+		#print('running'+str(model.global_step))
 		while not mon_sess.should_stop():
-			mon_sess.run(model.op)
+			#mon_sess.run(model.op)
 			print('running'+str(model.global_step.eval(session=mon_sess)))
+			print('model.var',len(model.var))
+			print('model.grad',len(model.grad))
+
+			if str(model.global_step.eval(session=mon_sess))=='0' or str(model.global_step.eval(session=mon_sess))==0:
+				outputlog=open(r'D:\GC-Base\logs.txt','w+')
+				for i in range(len(model.var)):
+					outputlog.write(str(i)+'\n')
+					outputlog.write(model.var[i].name+'\n')
+					outputlog.write(model.grad[i].name+'\n')
+				outputlog.close()
 			#b=model.grads
 			#print(len(b))
 			#print(model.grads[1].eval(session=mon_sess))

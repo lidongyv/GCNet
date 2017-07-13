@@ -60,6 +60,7 @@ class E2EModel(object):
 		conv=self._batch_norm_3d(name,conv)
 		conv=self._relu(conv)
 		return conv
+
 	def _relu(self, x, leakiness=0.0):
 		"""Relu, with optional leaky support."""
 		return tf.where(tf.less(x, 0.0), leakiness * x, x, name='leaky_relu')
@@ -204,7 +205,7 @@ class E2EModel(object):
 		return out
 	def _3d_cnn(self,input):
 		
-		with tf.device('/gpu:2'):
+		with tf.device('/gpu:0'):
 			with tf.variable_scope('conv19'):
 				kernel=[3,3,3,64,32]
 				stride=[1,1,1,1,1]
@@ -242,7 +243,7 @@ class E2EModel(object):
 				kernel=[3,3,3,64,64]
 				stride=[1,2,2,2,1]
 				out=self._conv3d('conv27',out26,kernel,stride)
-		#with tf.device('/gpu:1'):
+
 			with tf.variable_scope('conv28'):
 				kernel=[3,3,3,64,64]
 				stride=[1,1,1,1,1]
@@ -416,22 +417,30 @@ class E2EModel(object):
 
 			trainable_variables = tf.trainable_variables()
 			grads = tf.gradients(self.loss, trainable_variables)
-		with tf.device('/gpuL:1'):
-			var1=trainable_variables[0:50]
-			grad1=grad[0:50]
-		with tf.device('/gpuL:3'):
-			grad2=grad[50:107]
-		with tf.device('/gpu:1'):
+			self.grad=grads
+			self.var=trainable_variables
+		"""
+		with tf.device('/gpu:2'):
+			var1=trainable_variables[60:107]
+			grad1=tf.gradients(self.loss, var1)
+		with tf.device('/gpu:3'):
+			var2=trainable_variables[57:107]
+			grad2=tf.gradients(self.loss, var2)
+		"""
+		with tf.device('/gpu:3'):
 			optimizer = tf.train.RMSPropOptimizer(
 				self.lrn_rate,
 				decay=0.9,
 				momentum=0.9,
 				epsilon=1.0)
-			apply_op = optimizer.apply_gradients(
-				zip(grad1, var1),
+			apply_op1 = optimizer.apply_gradients(
+				zip(grads, trainable_variables),
 				global_step=self.global_step, name='train_step')
-			self.op=apply_op
-			train_ops = [apply_op] + self._extra_train_ops
+			#apply_op2 = optimizer.apply_gradients(
+			#	zip(grad2, var2),
+			#	global_step=self.global_step, name='train_step')
+			self.op=apply_op1
+			train_ops = [apply_op1] + self._extra_train_ops
 			self.train_op = tf.group(*train_ops)
 
 
