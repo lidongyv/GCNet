@@ -11,7 +11,7 @@ import numpy as np
 import argparse
 from tensorflow.python.platform import app
 from tensorflow.python.platform import flags
-
+import gradients_gpus as gra_gpu
 from tensorflow.python.training import moving_averages
 
 
@@ -414,33 +414,38 @@ class E2EModel(object):
 		with tf.device('/gpu:1'):
 			self.lrn_rate = tf.constant(0.0001, tf.float32)
 			tf.summary.scalar('learning_rate', self.lrn_rate)
-
+		"""
 			trainable_variables = tf.trainable_variables()
-			grads = tf.gradients(self.loss, trainable_variables)
+			grads = gra_gpu.gradients(self.loss, trainable_variables)
 			self.grad=grads
 			self.var=trainable_variables
 		"""
-		with tf.device('/gpu:2'):
-			var1=trainable_variables[60:107]
-			grad1=tf.gradients(self.loss, var1)
-		with tf.device('/gpu:3'):
-			var2=trainable_variables[57:107]
-			grad2=tf.gradients(self.loss, var2)
-		"""
-		with tf.device('/gpu:3'):
+		with tf.variable_scope('gradients_gpu') as scope:
+			with tf.device('/gpu:1'):
+				var1=tf.trainable_variables()[95:107]
+				grad1=gra_gpu.gradients(self.loss, var1,name='gradients')
+			scope.reuse_variables()
+			"""
+			with tf.device('/gpu:3'):
+				var2=tf.trainable_variables()[90:96]
+				grad2=gra_gpu.gradients(self.loss, var2,name='gradients')
+			"""
+		with tf.device('/gpu:1'):
 			optimizer = tf.train.RMSPropOptimizer(
 				self.lrn_rate,
 				decay=0.9,
 				momentum=0.9,
 				epsilon=1.0)
 			apply_op1 = optimizer.apply_gradients(
-				zip(grads, trainable_variables),
+				zip(grad1, var1),
 				global_step=self.global_step, name='train_step')
-			#apply_op2 = optimizer.apply_gradients(
-			#	zip(grad2, var2),
-			#	global_step=self.global_step, name='train_step')
+			"""
+			apply_op2 = optimizer.apply_gradients(
+				zip(grad2, var2),
+				global_step=self.global_step, name='train_step2')
+			"""
 			self.op=apply_op1
-			train_ops = [apply_op1] + self._extra_train_ops
+			train_ops = [apply_op1]+ self._extra_train_ops
 			self.train_op = tf.group(*train_ops)
 
 

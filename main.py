@@ -52,7 +52,7 @@ if __name__ == '__main__':
  """
 
 def train():
-	tf.device('/gpu:0')
+	#tf.device('/gpu:0')
 	#get input data
 	images,disparities=get_input(1) 
 	model=whole_model.E2EModel(images,disparities,'train')
@@ -101,8 +101,9 @@ def train():
       config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=True)) as mon_sess:
 		#print('running'+str(model.global_step))
 		while not mon_sess.should_stop():
-			#mon_sess.run(model.op)
+			mon_sess.run(model.op)
 			print('running'+str(model.global_step.eval(session=mon_sess)))
+			"""
 			print('model.var',len(model.var))
 			print('model.grad',len(model.grad))
 
@@ -113,6 +114,7 @@ def train():
 					outputlog.write(model.var[i].name+'\n')
 					outputlog.write(model.grad[i].name+'\n')
 				outputlog.close()
+			"""
 			#b=model.grads
 			#print(len(b))
 			#print(model.grads[1].eval(session=mon_sess))
