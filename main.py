@@ -61,7 +61,7 @@ def train():
 
 	summary_hook = tf.train.SummarySaverHook(
       save_steps=100,
-      output_dir=r'D:\GC-Base\output',
+      output_dir=r'D:\GC-Base\log\output',
       summary_op=tf.summary.merge([model.summaries,
       	
       							tf.summary.scalar('lpre',model.lprecision),tf.summary.scalar('rpre',model.rprecison)]))
