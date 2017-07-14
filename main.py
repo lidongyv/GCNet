@@ -52,7 +52,7 @@ if __name__ == '__main__':
  """
 
 def train():
-	#tf.device('/gpu:0')
+	tf.device('/gpu:0')
 	#get input data
 	images,disparities=get_input(1) 
 	model=whole_model.E2EModel(images,disparities,'train')
@@ -63,6 +63,7 @@ def train():
       save_steps=100,
       output_dir=r'D:\GC-Base\output',
       summary_op=tf.summary.merge([model.summaries,
+      	
       							tf.summary.scalar('lpre',model.lprecision),tf.summary.scalar('rpre',model.rprecison)]))
 	logging_hook = tf.train.LoggingTensorHook(
       tensors={'step': model.global_step,

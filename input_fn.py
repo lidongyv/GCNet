@@ -34,7 +34,7 @@ def get_input(mode=0):
     	three matrix for left images, right images, with the conresponding ground truth images
     """
     #load a single converted tfrecords
-    file=gfile.Glob(os.path.join(r'D:\SceneFlow','tmp_data.tfrecords'))
+    file=gfile.Glob(os.path.join(r'D:\SceneFlow','scene_flow_data_1.tfrecords'))
     data=tf.train.string_input_producer(file,shuffle=False)
     reader=tf.TFRecordReader()
     key,value=reader.read(data)

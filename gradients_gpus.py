@@ -21,11 +21,10 @@ from __future__ import print_function
 import collections
 import contextlib
 import warnings
-
+import tensorflow as tf
 import numpy as np
 import six
 from six.moves import xrange  # pylint: disable=redefined-builtin
-import tensorflow as tf
 from tensorflow.core.framework import attr_value_pb2
 from tensorflow.python.framework import constant_op
 from tensorflow.python.framework import dtypes
@@ -416,7 +415,6 @@ def gradients(ys,
   """
   ys = _AsList(ys)
   xs = _AsList(xs)
-  length=len(ys)
   if grad_ys is None:
     grad_ys = [None] * len(ys)
   else:
@@ -458,13 +456,8 @@ def gradients(ys,
     grads = {}
 
     # Add the initial gradients for the ys.
-    for y, grad_y,i in zip(ys, grad_ys,np.arange(length).tolist()):
-      if i<length/2:
-        with tf.device('/gpu:2'):
-            _SetGrad(grads, y, grad_y)
-      else:
-        with tf.device('/gpu:3'):
-            _SetGrad(grads, y, grad_y)
+    for y, grad_y in zip(ys, grad_ys):
+      _SetGrad(grads, y, grad_y)
 
     # Initialize queue with to_ops.
     queue = collections.deque()
@@ -492,170 +485,92 @@ def gradients(ys,
     i=0
     while queue:
       # generate gradient subgraph for op.
-      if i<length/2:
-        with tf.device('/gpu:2'):
-          op = queue.popleft()
-          with _maybe_colocate_with(op, colocate_gradients_with_ops):
-            if loop_state:
-              loop_state.EnterGradWhileContext(op, before=True)
-            out_grads = _AggregatedGrads(grads, op, loop_state, aggregation_method)
-            if loop_state:
-              loop_state.ExitGradWhileContext(op, before=True)
+      op = queue.popleft()
+      with _maybe_colocate_with(op, colocate_gradients_with_ops):
+        if loop_state:
+          loop_state.EnterGradWhileContext(op, before=True)
+        out_grads = _AggregatedGrads(grads, op, loop_state, aggregation_method)
+        if loop_state:
+          loop_state.ExitGradWhileContext(op, before=True)
 
-            grad_fn = None
-            # pylint: disable=protected-access
-            func_call = None
-            is_func_call = ops.get_default_graph()._is_function(op.type)
-            has_out_grads = any(isinstance(g, ops.Tensor) or g for g in out_grads)
-            if has_out_grads and (op._id not in stop_ops):
-              if is_func_call:
-                func_call = ops.get_default_graph()._get_function(op.type)
-                grad_fn = func_call.python_grad_func
-                # pylint: enable=protected-access
+        grad_fn = None
+        # pylint: disable=protected-access
+        func_call = None
+        is_func_call = ops.get_default_graph()._is_function(op.type)
+        has_out_grads = any(isinstance(g, ops.Tensor) or g for g in out_grads)
+        if has_out_grads and (op._id not in stop_ops):
+          if is_func_call:
+            func_call = ops.get_default_graph()._get_function(op.type)
+            grad_fn = func_call.python_grad_func
+            # pylint: enable=protected-access
+          else:
+            # A grad_fn must be defined, either as a function or as None
+            # for ops that do not have gradients.
+            try:
+              grad_fn = ops.get_gradient_function(op)
+            except LookupError:
+              raise LookupError(
+                  "No gradient defined for operation '%s' (op type: %s)" %
+                  (op.name, op.type))
+        if loop_state:
+          loop_state.EnterGradWhileContext(op, before=False)
+        if (grad_fn or is_func_call) and has_out_grads:
+          # NOTE: If _AggregatedGrads didn't compute a value for the i'th
+          # output, it means that the cost does not depend on output[i],
+          # therefore dC/doutput[i] is 0.
+          for i, out_grad in enumerate(out_grads):
+            if (not isinstance(out_grad, ops.Tensor) and
+                not out_grad) and _IsTrainable(op.outputs[i]):
+              # Only floating-point outputs get a zero gradient. Gradient
+              # functions should ignore the gradient for other outputs.
+              # TODO(apassos) gradients of resource handles might be an
+              # issue here because of zeros.
+              if loop_state:
+                out_grads[i] = loop_state.ZerosLike(op, i)
               else:
-                # A grad_fn must be defined, either as a function or as None
-                # for ops that do not have gradients.
-                try:
-                  grad_fn = ops.get_gradient_function(op)
-                except LookupError:
-                  raise LookupError(
-                      "No gradient defined for operation '%s' (op type: %s)" %
-                      (op.name, op.type))
-            if loop_state:
-              loop_state.EnterGradWhileContext(op, before=False)
-            if (grad_fn or is_func_call) and has_out_grads:
-              # NOTE: If _AggregatedGrads didn't compute a value for the i'th
-              # output, it means that the cost does not depend on output[i],
-              # therefore dC/doutput[i] is 0.
-              for i, out_grad in enumerate(out_grads):
-                if (not isinstance(out_grad, ops.Tensor) and
-                    not out_grad) and _IsTrainable(op.outputs[i]):
-                  # Only floating-point outputs get a zero gradient. Gradient
-                  # functions should ignore the gradient for other outputs.
-                  # TODO(apassos) gradients of resource handles might be an
-                  # issue here because of zeros.
-                  if loop_state:
-                    out_grads[i] = loop_state.ZerosLike(op, i)
-                  else:
-                    out_grads[i] = control_flow_ops.ZerosLikeOutsideLoop(op, i)
-              with ops.name_scope(op.name + "_grad"):
-                # pylint: disable=protected-access
-                with ops.get_default_graph()._original_op(op):
-                  # pylint: enable=protected-access
-                  if grad_fn:
-                    # If grad_fn was found, do not use SymbolicGradient even for
-                    # functions.
-                    in_grads = _MaybeCompile(
-                        grad_scope, op, func_call, lambda: grad_fn(op, *out_grads))
-                  else:
-                    # For function call ops, we add a 'SymbolicGradient'
-                    # node to the graph to compute gradients.
-                    in_grads = _MaybeCompile(
-                        grad_scope, op, func_call, lambda: _SymGrad(op, out_grads))
-                  in_grads = _AsList(in_grads)
-                  _VerifyGeneratedGradients(in_grads, op)
-                  if gate_gradients and len(
-                      [x for x in in_grads if x is not None]) > 1:
-                    in_grads = control_flow_ops.tuple(in_grads)
-              _LogOpGradients(op, out_grads, in_grads)
-            else:
-              # If no grad_fn is defined or none of out_grads is available,
-              # just propagate a list of None backwards.
-              in_grads = [None] * len(op.inputs)
-            for t_in, in_grad in zip(op.inputs, in_grads):
-              if in_grad is not None:
-                if (isinstance(in_grad, ops.Tensor) and
-                    t_in.dtype != dtypes.resource):
-                  in_grad.set_shape(t_in.get_shape())
-                _SetGrad(grads, t_in, in_grad)
-            if loop_state:
-              loop_state.ExitGradWhileContext(op, before=False)
-
-          # Update pending count for the inputs of op and enqueue ready ops.
-          _UpdatePendingAndEnqueueReady(grads, op, queue, pending_count, loop_state)
-      else:
-
-        with tf.device('/gpu:2'):
-          op = queue.popleft()
-          with _maybe_colocate_with(op, colocate_gradients_with_ops):
-            if loop_state:
-              loop_state.EnterGradWhileContext(op, before=True)
-            out_grads = _AggregatedGrads(grads, op, loop_state, aggregation_method)
-            if loop_state:
-              loop_state.ExitGradWhileContext(op, before=True)
-
-            grad_fn = None
+                out_grads[i] = control_flow_ops.ZerosLikeOutsideLoop(op, i)
+          with ops.name_scope(op.name + "_grad"):
             # pylint: disable=protected-access
-            func_call = None
-            is_func_call = ops.get_default_graph()._is_function(op.type)
-            has_out_grads = any(isinstance(g, ops.Tensor) or g for g in out_grads)
-            if has_out_grads and (op._id not in stop_ops):
-              if is_func_call:
-                func_call = ops.get_default_graph()._get_function(op.type)
-                grad_fn = func_call.python_grad_func
-                # pylint: enable=protected-access
-              else:
-                # A grad_fn must be defined, either as a function or as None
-                # for ops that do not have gradients.
-                try:
-                  grad_fn = ops.get_gradient_function(op)
-                except LookupError:
-                  raise LookupError(
-                      "No gradient defined for operation '%s' (op type: %s)" %
-                      (op.name, op.type))
-            if loop_state:
-              loop_state.EnterGradWhileContext(op, before=False)
-            if (grad_fn or is_func_call) and has_out_grads:
-              # NOTE: If _AggregatedGrads didn't compute a value for the i'th
-              # output, it means that the cost does not depend on output[i],
-              # therefore dC/doutput[i] is 0.
-              for i, out_grad in enumerate(out_grads):
-                if (not isinstance(out_grad, ops.Tensor) and
-                    not out_grad) and _IsTrainable(op.outputs[i]):
-                  # Only floating-point outputs get a zero gradient. Gradient
-                  # functions should ignore the gradient for other outputs.
-                  # TODO(apassos) gradients of resource handles might be an
-                  # issue here because of zeros.
-                  if loop_state:
-                    out_grads[i] = loop_state.ZerosLike(op, i)
-                  else:
-                    out_grads[i] = control_flow_ops.ZerosLikeOutsideLoop(op, i)
-              with ops.name_scope(op.name + "_grad"):
-                # pylint: disable=protected-access
-                with ops.get_default_graph()._original_op(op):
-                  # pylint: enable=protected-access
-                  if grad_fn:
-                    # If grad_fn was found, do not use SymbolicGradient even for
-                    # functions.
-                    in_grads = _MaybeCompile(
-                        grad_scope, op, func_call, lambda: grad_fn(op, *out_grads))
-                  else:
-                    # For function call ops, we add a 'SymbolicGradient'
-                    # node to the graph to compute gradients.
-                    in_grads = _MaybeCompile(
-                        grad_scope, op, func_call, lambda: _SymGrad(op, out_grads))
-                  in_grads = _AsList(in_grads)
-                  _VerifyGeneratedGradients(in_grads, op)
-                  if gate_gradients and len(
-                      [x for x in in_grads if x is not None]) > 1:
-                    in_grads = control_flow_ops.tuple(in_grads)
-              _LogOpGradients(op, out_grads, in_grads)
-            else:
-              # If no grad_fn is defined or none of out_grads is available,
-              # just propagate a list of None backwards.
-              in_grads = [None] * len(op.inputs)
-            for t_in, in_grad in zip(op.inputs, in_grads):
-              if in_grad is not None:
-                if (isinstance(in_grad, ops.Tensor) and
-                    t_in.dtype != dtypes.resource):
-                  in_grad.set_shape(t_in.get_shape())
-                _SetGrad(grads, t_in, in_grad)
-            if loop_state:
-              loop_state.ExitGradWhileContext(op, before=False)
+            with ops.get_default_graph()._original_op(op):
+              i=i+1
+              print(i)
+              # pylint: enable=protected-access
+              if grad_fn:
+                # If grad_fn was found, do not use SymbolicGradient even for
+                # functions.
+                # multiple gpu operation
 
-          # Update pending count for the inputs of op and enqueue ready ops.
-          _UpdatePendingAndEnqueueReady(grads, op, queue, pending_count, loop_state)
-      i=i+1
+                in_grads = _MaybeCompile(
+                    grad_scope, op, func_call, lambda: grad_fn(op, *out_grads))
+                
+              else:
+                # For function call ops, we add a 'SymbolicGradient'
+                # node to the graph to compute gradients.
+                # multiple gpu operation
+                in_grads = _MaybeCompile(
+                    grad_scope, op, func_call, lambda: _SymGrad(op, out_grads))
+              in_grads = _AsList(in_grads)
+              _VerifyGeneratedGradients(in_grads, op)
+              if gate_gradients and len(
+                  [x for x in in_grads if x is not None]) > 1:
+                in_grads = control_flow_ops.tuple(in_grads)
+          _LogOpGradients(op, out_grads, in_grads)
+        else:
+          # If no grad_fn is defined or none of out_grads is available,
+          # just propagate a list of None backwards.
+          in_grads = [None] * len(op.inputs)
+        for t_in, in_grad in zip(op.inputs, in_grads):
+          if in_grad is not None:
+            if (isinstance(in_grad, ops.Tensor) and
+                t_in.dtype != dtypes.resource):
+              in_grad.set_shape(t_in.get_shape())
+            _SetGrad(grads, t_in, in_grad)
+        if loop_state:
+          loop_state.ExitGradWhileContext(op, before=False)
+
+      # Update pending count for the inputs of op and enqueue ready ops.
+      _UpdatePendingAndEnqueueReady(grads, op, queue, pending_count, loop_state)
+
   if loop_state:
     loop_state.PostProcessing()
   return [_GetGrad(grads, x) for x in xs]
