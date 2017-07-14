@@ -345,6 +345,7 @@ class E2EModel(object):
 			disparity=tf.reshape(volume,[IMG_DISPARITY,IMG_HEIGHT,IMG_WIDTH])
 			probability=tf.nn.softmax(-disparity,dim=0)
 			disparities=tf.reduce_sum(d*probability,0)
+			disparities=tf.reshape(disparities,[1,IMG_HEIGHT,IMG_WIDTH])
 		return disparities
 
 	def _create_volume(self,linput,rinput):
@@ -369,14 +370,16 @@ class E2EModel(object):
 
 	def _loss(self,lpre,rpre):
 		ground=tf.split(self.labels,num_or_size_splits=2,axis=1)
-		lground=tf.reshape(ground[0],[IMG_HEIGHT,IMG_WIDTH])
-		rground=tf.reshape(ground[1],[IMG_HEIGHT,IMG_WIDTH])
-		sum=tf.abs(lpre-lground)
-		loss=tf.reduce_sum(sum)/(IMG_HEIGHT*IMG_WIDTH)
-		self.lprecision=loss
-		sum=tf.abs(rpre-rground)
-		self.rprecison=tf.reduce_sum(sum)/(IMG_HEIGHT*IMG_WIDTH)
-		loss=loss+tf.reduce_sum(sum)/(IMG_HEIGHT*IMG_WIDTH)
+		lground=tf.reshape(ground[0],[1,IMG_HEIGHT,IMG_WIDTH])
+		rground=tf.reshape(ground[1],[1,IMG_HEIGHT,IMG_WIDTH])
+		suml=tf.abs(lpre-lground)
+		loss=tf.reduce_mean(suml)
+		sumr=tf.abs(rpre-rground)
+		self.rprecison=tf.reduce_mean(sumr)
+		loss=loss+tf.reduce_mean(sumr)
+		self.error1=tf.reduce_mean(tf.to_float(tf.less(suml,1)))+tf.reduce_mean(tf.to_float(tf.less(sumr,1)))
+		self.error2=tf.reduce_mean(tf.to_float(tf.less(suml,2)))+tf.reduce_mean(tf.to_float(tf.less(sumr,2)))
+		self.error3=tf.reduce_mean(tf.to_float(tf.less(suml,2)))+tf.reduce_mean(tf.to_float(tf.less(sumr,2)))
 		return loss
 	def _build_model(self):	
 		images=tf.split(self.image,num_or_size_splits=2, axis=1)
@@ -405,10 +408,13 @@ class E2EModel(object):
 			rdisparities=self._todisparity(right)
 			#ldisparities=tf.get_variable('ldisparity',[IMG_HEIGHT,IMG_WIDTH],tf.float32,initializer=tf.random_normal_initializer())
 			#rdisparities=tf.get_variable('rdisparity',[IMG_HEIGHT,IMG_WIDTH],tf.float32,initializer=tf.random_normal_initializer())
-		self.lpre=ldisparities
-		self.rpre=rdisparities
+		self.lpre=tf.reshape(ldisparities,[1,IMG_HEIGHT,IMG_WIDTH,1])/255
+		self.rpre=tf.reshape(rdisparities,[1,IMG_HEIGHT,IMG_WIDTH,1])/255
 		self.loss=self._loss(ldisparities,rdisparities)
 		tf.summary.scalar('loss',self.loss)
+		tf.summary.scalar('error1',self.error1)
+		tf.summary.scalar('error2',self.error2)
+		tf.summary.scalar('error3',self.error3)
 	def _build_train_op(self):
 		"""Build training specific ops for the graph."""
 		with tf.device('/gpu:1'):

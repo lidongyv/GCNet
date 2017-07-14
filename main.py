@@ -63,13 +63,14 @@ def train():
       save_steps=100,
       output_dir=r'D:\GC-Base\log\output',
       summary_op=tf.summary.merge([model.summaries,
-      	
-      							tf.summary.scalar('lpre',model.lprecision),tf.summary.scalar('rpre',model.rprecison)]))
+      							tf.summary.image('lpre',model.lpre,max_outputs=1),tf.summary.image('rpre',model.lpre,max_outputs=1)]))
 	logging_hook = tf.train.LoggingTensorHook(
       tensors={'step': model.global_step,
                'loss': model.loss,
-               'lprecision': model.lpre,
-               'rprecision': model.rpre },
+               'error1': model.error1,
+               'error2': model.error2,
+               'error3':model.error3
+               },
       every_n_iter=100)
 	class _LearningRateSetterHook(tf.train.SessionRunHook):
 		"""Sets learning_rate based on global step."""
