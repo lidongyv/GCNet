@@ -426,9 +426,12 @@ class E2EModel(object):
 			self.grad=grads
 			self.var=trainable_variables
 		"""
-		#grads = tf.gradients(self.loss, trainable_variables)    
+		#grads = tf.gradients(self.loss, trainable_variables)
+		with tf.device('gpu:0'):
+			var0=tf.trainable_variables()[0:15]
+			grad0=tf.gradients(self.loss, var0,name='gradients')
 		with tf.device('/gpu:1'):
-			var1=tf.trainable_variables()[0:30]
+			var1=tf.trainable_variables()[15:30]
 			grad1=tf.gradients(self.loss, var1,name='gradients')
 		with tf.device('/gpu:2'):
 			var2=tf.trainable_variables()[30:80]
@@ -447,6 +450,9 @@ class E2EModel(object):
 				decay=0.9,
 				momentum=0.9,
 				epsilon=1.0)
+			apply_op0 = optimizer.apply_gradients(
+				zip(grad0, var0),
+				global_step=self.global_step, name='train_step0')
 			apply_op1 = optimizer.apply_gradients(
 				zip(grad1, var1),
 				global_step=self.global_step, name='train_step1')
@@ -462,7 +468,7 @@ class E2EModel(object):
 				global_step=self.global_step, name='train_step2')
 			"""
 			self.op=apply_op1
-			train_ops = [apply_op1]+[apply_op2] + [apply_op3] + self._extra_train_ops
+			train_ops = [apply_op0]+[apply_op1]+[apply_op2] + [apply_op3] + self._extra_train_ops
 			self.train_op = tf.group(*train_ops)
 
 

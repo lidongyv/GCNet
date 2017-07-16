@@ -52,6 +52,7 @@ def get_input(mode=0):
     rimage=tf.decode_raw(features['image_right_raw'],tf.uint8)
     ldisparity=tf.decode_raw(features['label_left_raw'],tf.float32)
     rdisparity=tf.decode_raw(features['label_right_raw'],tf.float32)
+    name=features['name_raw']
     #reshape the data
     limage.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT*COLOR_CHAN)
     limage=tf.reshape(limage,[ORIGINAL_HEIGHT,ORIGINAL_WIDTH,COLOR_CHAN])
@@ -68,8 +69,8 @@ def get_input(mode=0):
     right=tf.concat([rimage,rdisparity],axis=2)
     left=tf.random_crop(left,[IMG_HEIGHT,IMG_WIDTH,4])
     right=tf.random_crop(right,[IMG_HEIGHT,IMG_WIDTH,4])
-    [input_batch,disaprity_batch]=tf.train.shuffle_batch([[left[:,:,0:3],right[:,:,0:3]],[left[:,:,3],right[:,:,3]]],batch_size=1,capacity=20,min_after_dequeue=1)
-    return input_batch,disaprity_batch
+    [input_batch,disaprity_batch]=tf.train.shuffle_batch([[left[:,:,0:3],right[:,:,0:3]],[left[:,:,3],right[:,:,3]]],batch_size=1,capacity=2,num_threads=4,min_after_dequeue=1)
+    return input_batch,disaprity_batch,name
     
     
 
