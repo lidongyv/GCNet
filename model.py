@@ -11,7 +11,6 @@ import numpy as np
 import argparse
 from tensorflow.python.platform import app
 from tensorflow.python.platform import flags
-import gradients_gpus as gra_gpu
 from tensorflow.python.training import moving_averages
 
 
@@ -184,149 +183,120 @@ class E2EModel(object):
 			y.set_shape(x.get_shape())
 		return y
 	def siamese_cnn(self,image):
-		with tf.device('/gpu:0'):
-			with tf.variable_scope('conv1'):
-				kernel=[5,5,3,32]
-				bias=[32]
-				stride=[1,2,2,1]
-				out=self._sia_conv(image,kernel,stride)
-			#resnet 2d conv part
-			for i in range(8):
-				with tf.variable_scope('res_uint_%d' % i):
-					out=self._residual_cnn(out)
 		#with tf.device('/gpu:0'):
-			out=self._batch_norm('conv17_bn',out)
-			out=self._relu(out,0)
-			with tf.variable_scope('conv18'):
-				kernel=[3,3,32,32]
-				bias=[32]
-				stride=[1,1,1,1]
-				out=self._sia_conv(out,kernel,stride)
+		with tf.variable_scope('conv1'):
+			kernel=[5,5,3,32]
+			bias=[32]
+			stride=[1,2,2,1]
+			out=self._sia_conv(image,kernel,stride)
+		#resnet 2d conv part
+		for i in range(8):
+			with tf.variable_scope('res_uint_%d' % i):
+				out=self._residual_cnn(out)
+	#with tf.device('/gpu:0'):
+		out=self._batch_norm('conv17_bn',out)
+		out=self._relu(out,0)
+		with tf.variable_scope('conv18'):
+			kernel=[3,3,32,32]
+			bias=[32]
+			stride=[1,1,1,1]
+			out=self._sia_conv(out,kernel,stride)
 		return out
 	def _3d_cnn(self,input):
 		
-		with tf.device('/gpu:0'):
-			with tf.variable_scope('conv19'):
-				kernel=[3,3,3,64,32]
-				stride=[1,1,1,1,1]
-				out=self._conv3d('conv19',input,kernel,stride)
-			with tf.variable_scope('conv20'):
-				kernel=[3,3,3,32,32]
-				stride=[1,1,1,1,1]
-				out20=self._conv3d('conv20',out,kernel,stride)
-			
-			with tf.variable_scope('conv21'):
-				kernel=[3,3,3,32,64]
-				stride=[1,2,2,2,1]
-				out=self._conv3d('conv21',out20,kernel,stride)
-			with tf.variable_scope('conv22'):
-				kernel=[3,3,3,64,64]
-				stride=[1,1,1,1,1]
-				out=self._conv3d('conv22',out,kernel,stride)
-			with tf.variable_scope('conv23'):
-				kernel=[3,3,3,64,64]
-				stride=[1,1,1,1,1]
-				out23=self._conv3d('conv23',out,kernel,stride)
-			with tf.variable_scope('conv24'):
-				kernel=[3,3,3,64,64]
-				stride=[1,2,2,2,1]
-				out=self._conv3d('conv24',out23,kernel,stride)
-			with tf.variable_scope('conv25'):
-				kernel=[3,3,3,64,64]
-				stride=[1,1,1,1,1]
-				out=self._conv3d('conv25',out,kernel,stride)
-			with tf.variable_scope('conv26'):
-				kernel=[3,3,3,64,64]
-				stride=[1,1,1,1,1]
-				out26=self._conv3d('conv26',out,kernel,stride)
-			with tf.variable_scope('conv27'):
-				kernel=[3,3,3,64,64]
-				stride=[1,2,2,2,1]
-				out=self._conv3d('conv27',out26,kernel,stride)
-
-			with tf.variable_scope('conv28'):
-				kernel=[3,3,3,64,64]
-				stride=[1,1,1,1,1]
-				out=self._conv3d('conv28',out,kernel,stride)
-			with tf.variable_scope('conv29'):
-				kernel=[3,3,3,64,64]
-				stride=[1,1,1,1,1]
-				out29=self._conv3d('conv29',out,kernel,stride)
-			with tf.variable_scope('conv30'):
-				kernel=[3,3,3,64,128]
-				stride=[1,2,2,2,1]
-				out=self._conv3d('conv30',out29,kernel,stride)
-			with tf.variable_scope('conv31'):
-				kernel=[3,3,3,128,128]
-				stride=[1,1,1,1,1]
-				out=self._conv3d('conv31',out,kernel,stride)
-			with tf.variable_scope('conv32'):
-				kernel=[3,3,3,128,128]
-				stride=[1,1,1,1,1]
-				out=self._conv3d('conv32',out,kernel,stride)
-			with tf.variable_scope('de_conv33'):
-				kernel=[3,3,3,64,128]
-				stride=[1,2,2,2,1]
-				output=tf.constant([1,np.ceil(IMG_DISPARITY/16).astype('int32'),np.ceil(IMG_HEIGHT/16).astype('int32'),np.ceil(IMG_WIDTH/16).astype('int32'),64])
-				out=self._deconv3d('de_conv33',out,kernel,output,stride)
-				out+=out29
-			with tf.variable_scope('de_conv34'):
-				kernel=[3,3,3,64,64]
-				stride=[1,2,2,2,1]
-				output=tf.constant([1,np.ceil(IMG_DISPARITY/8).astype('int32'),np.ceil(IMG_HEIGHT/8).astype('int32'),np.ceil(IMG_WIDTH/8).astype('int32'),64])
-				out=self._deconv3d('de_conv34',out,kernel,output,stride)
-				out+=out26
-			with tf.variable_scope('de_conv35'):
-				kernel=[3,3,3,64,64]
-				stride=[1,2,2,2,1]
-				output=tf.constant([1,np.ceil(IMG_DISPARITY/4).astype('int32'),np.ceil(IMG_HEIGHT/4).astype('int32'),np.ceil(IMG_WIDTH/4).astype('int32'),64])
-				out=self._deconv3d('de_conv35',out,kernel,output,stride)
-				out+=out23
-			
-			with tf.variable_scope('de_conv36'):
-				kernel=[3,3,3,32,64]
-				stride=[1,2,2,2,1]
-				output=tf.constant([1,np.ceil(IMG_DISPARITY/2).astype('int32'),np.ceil(IMG_HEIGHT/2).astype('int32'),np.ceil(IMG_WIDTH/2).astype('int32'),32])
-				out=self._deconv3d('de_conv36',out,kernel,output,stride)
-				out+=out20
-				
-			with tf.variable_scope('de_conv37'):
-				kernel=[3,3,3,1,32]
-				stride=[1,2,2,2,1]
-				n=kernel[0]*kernel[1]*kernel[2]*kernel[3]
-				output=tf.constant([1,IMG_DISPARITY,IMG_HEIGHT,IMG_WIDTH,1])
-				weights=tf.get_variable('weights',kernel,tf.float32,initializer=tf.random_normal_initializer(stddev=np.sqrt(2.0/n)))
-				out=tf.nn.conv3d_transpose(out,weights,output,strides=stride,padding='SAME')
-
+		#with tf.device('/gpu:0'):
+		with tf.variable_scope('conv19'):
+			kernel=[3,3,3,64,32]
+			stride=[1,1,1,1,1]
+			out=self._conv3d('conv19',input,kernel,stride)
+		with tf.variable_scope('conv20'):
+			kernel=[3,3,3,32,32]
+			stride=[1,1,1,1,1]
+			out20=self._conv3d('conv20',out,kernel,stride)
 		
-		"""
-		with tf.device('/gpu:0'):
-			with tf.variable_scope('conv19'):
-				kernel=[3,3,3,64,32]
-				stride=[1,1,1,1,1]
-				out1=self._conv3d('conv19',input,kernel,stride)
-			with tf.variable_scope('conv20'):
-				kernel=[3,3,3,32,32]
-				stride=[1,2,2,2,1]
-				out20=self._conv3d('conv20',out1,kernel,stride)
+		with tf.variable_scope('conv21'):
+			kernel=[3,3,3,32,64]
+			stride=[1,2,2,2,1]
+			out=self._conv3d('conv21',out20,kernel,stride)
+		with tf.variable_scope('conv22'):
+			kernel=[3,3,3,64,64]
+			stride=[1,1,1,1,1]
+			out=self._conv3d('conv22',out,kernel,stride)
+		with tf.variable_scope('conv23'):
+			kernel=[3,3,3,64,64]
+			stride=[1,1,1,1,1]
+			out23=self._conv3d('conv23',out,kernel,stride)
+		with tf.variable_scope('conv24'):
+			kernel=[3,3,3,64,64]
+			stride=[1,2,2,2,1]
+			out=self._conv3d('conv24',out23,kernel,stride)
+		with tf.variable_scope('conv25'):
+			kernel=[3,3,3,64,64]
+			stride=[1,1,1,1,1]
+			out=self._conv3d('conv25',out,kernel,stride)
+		with tf.variable_scope('conv26'):
+			kernel=[3,3,3,64,64]
+			stride=[1,1,1,1,1]
+			out26=self._conv3d('conv26',out,kernel,stride)
+		with tf.variable_scope('conv27'):
+			kernel=[3,3,3,64,64]
+			stride=[1,2,2,2,1]
+			out=self._conv3d('conv27',out26,kernel,stride)
 
+		with tf.variable_scope('conv28'):
+			kernel=[3,3,3,64,64]
+			stride=[1,1,1,1,1]
+			out=self._conv3d('conv28',out,kernel,stride)
+		with tf.variable_scope('conv29'):
+			kernel=[3,3,3,64,64]
+			stride=[1,1,1,1,1]
+			out29=self._conv3d('conv29',out,kernel,stride)
+		with tf.variable_scope('conv30'):
+			kernel=[3,3,3,64,128]
+			stride=[1,2,2,2,1]
+			out=self._conv3d('conv30',out29,kernel,stride)
+		with tf.variable_scope('conv31'):
+			kernel=[3,3,3,128,128]
+			stride=[1,1,1,1,1]
+			out=self._conv3d('conv31',out,kernel,stride)
+		with tf.variable_scope('conv32'):
+			kernel=[3,3,3,128,128]
+			stride=[1,1,1,1,1]
+			out=self._conv3d('conv32',out,kernel,stride)
+		with tf.variable_scope('de_conv33'):
+			kernel=[3,3,3,64,128]
+			stride=[1,2,2,2,1]
+			output=tf.constant([1,np.ceil(IMG_DISPARITY/16).astype('int32'),np.ceil(IMG_HEIGHT/16).astype('int32'),np.ceil(IMG_WIDTH/16).astype('int32'),64])
+			out=self._deconv3d('de_conv33',out,kernel,output,stride)
+			out+=out29
+		with tf.variable_scope('de_conv34'):
+			kernel=[3,3,3,64,64]
+			stride=[1,2,2,2,1]
+			output=tf.constant([1,np.ceil(IMG_DISPARITY/8).astype('int32'),np.ceil(IMG_HEIGHT/8).astype('int32'),np.ceil(IMG_WIDTH/8).astype('int32'),64])
+			out=self._deconv3d('de_conv34',out,kernel,output,stride)
+			out+=out26
+		with tf.variable_scope('de_conv35'):
+			kernel=[3,3,3,64,64]
+			stride=[1,2,2,2,1]
+			output=tf.constant([1,np.ceil(IMG_DISPARITY/4).astype('int32'),np.ceil(IMG_HEIGHT/4).astype('int32'),np.ceil(IMG_WIDTH/4).astype('int32'),64])
+			out=self._deconv3d('de_conv35',out,kernel,output,stride)
+			out+=out23
+		
+		with tf.variable_scope('de_conv36'):
+			kernel=[3,3,3,32,64]
+			stride=[1,2,2,2,1]
+			output=tf.constant([1,np.ceil(IMG_DISPARITY/2).astype('int32'),np.ceil(IMG_HEIGHT/2).astype('int32'),np.ceil(IMG_WIDTH/2).astype('int32'),32])
+			out=self._deconv3d('de_conv36',out,kernel,output,stride)
+			out+=out20
 			
-			with tf.variable_scope('de_conv36'):
-				kernel=[3,3,3,32,32]
-				stride=[1,2,2,2,1]
-				n=kernel[0]*kernel[1]*kernel[2]*kernel[3]
-				output=tf.constant([1,np.ceil(IMG_DISPARITY/2).astype('int32'),np.ceil(IMG_HEIGHT/2).astype('int32'),np.ceil(IMG_WIDTH/2).astype('int32'),32])
-				weights=tf.get_variable('weights',kernel,tf.float32,initializer=tf.random_normal_initializer(stddev=np.sqrt(2.0/n)))
-				out=tf.nn.conv3d_transpose(out20,weights,output,strides=stride,padding='SAME')
-			
-			with tf.variable_scope('de_conv37'):
-				kernel=[3,3,3,1,32]
-				stride=[1,2,2,2,1]
-				n=kernel[0]*kernel[1]*kernel[2]*kernel[3]
-				output=tf.constant([1,IMG_DISPARITY,IMG_HEIGHT,IMG_WIDTH,1])
-				weights=tf.get_variable('weights',kernel,tf.float32,initializer=tf.random_normal_initializer(stddev=np.sqrt(2.0/n)))
-				out=tf.nn.conv3d_transpose(out,weights,output,strides=stride,padding='SAME')
-		"""
+		with tf.variable_scope('de_conv37'):
+			kernel=[3,3,3,1,32]
+			stride=[1,2,2,2,1]
+			n=kernel[0]*kernel[1]*kernel[2]*kernel[3]
+			output=tf.constant([1,IMG_DISPARITY,IMG_HEIGHT,IMG_WIDTH,1])
+			weights=tf.get_variable('weights',kernel,tf.float32,initializer=tf.random_normal_initializer(stddev=np.sqrt(2.0/n)))
+			out=tf.nn.conv3d_transpose(out,weights,output,strides=stride,padding='SAME')
+
 		return out
 
 	"""
@@ -351,35 +321,37 @@ class E2EModel(object):
 	def _create_volume(self,linput,rinput):
 		#create the cost volume from b*w*h*f to b*d*w*h*2*f
 		#using split and concat to achieve the translation
-		with tf.device('/gpu:0'):
-			lvolume=[]
-			for i in range(int(IMG_DISPARITY/2)):
-				splits=tf.split(rinput,[int(IMG_WIDTH/2-i),i],axis=2)
-				rsplits=tf.concat([splits[1],splits[0]],axis=2)
-				single_dis=tf.concat([linput,rsplits],3)
-				lvolume.append(single_dis)
-			lvol=tf.stack(lvolume,axis=0)
-			rvolume=[]
-			for i in range(int(IMG_DISPARITY/2)):
-				splits=tf.split(linput,[i,int(IMG_WIDTH/2-i)],axis=2)
-				lsplits=tf.concat([splits[1],splits[0]],axis=2)
-				single_dis=tf.concat([rinput,lsplits],3)
-				rvolume.append(single_dis)
-			rvol=tf.stack(rvolume,axis=0)
+		#with tf.device('/gpu:0'):
+		lvolume=[]
+		for i in range(int(IMG_DISPARITY/2)):
+			splits=tf.split(rinput,[int(IMG_WIDTH/2-i),i],axis=2)
+			rsplits=tf.concat([splits[1],splits[0]],axis=2)
+			single_dis=tf.concat([linput,rsplits],3)
+			lvolume.append(single_dis)
+		lvol=tf.stack(lvolume,axis=0)
+		rvolume=[]
+		for i in range(int(IMG_DISPARITY/2)):
+			splits=tf.split(linput,[i,int(IMG_WIDTH/2-i)],axis=2)
+			lsplits=tf.concat([splits[1],splits[0]],axis=2)
+			single_dis=tf.concat([rinput,lsplits],3)
+			rvolume.append(single_dis)
+		rvol=tf.stack(rvolume,axis=0)
 		return lvol,rvol
 
-	def _loss(self,lpre,rpre):
+	def _loss(self,pre,mode):
 		ground=tf.split(self.labels,num_or_size_splits=2,axis=1)
-		lground=tf.reshape(ground[0],[1,IMG_HEIGHT,IMG_WIDTH])
-		rground=tf.reshape(ground[1],[1,IMG_HEIGHT,IMG_WIDTH])
-		suml=tf.abs(lpre-lground)
+		lground=tf.reshape(ground[mode],[1,IMG_HEIGHT,IMG_WIDTH])
+		#rground=tf.reshape(ground[1],[1,IMG_HEIGHT,IMG_WIDTH])
+		suml=tf.abs(pre-lground)
 		loss=tf.reduce_mean(suml)
-		sumr=tf.abs(rpre-rground)
-		self.rprecison=tf.reduce_mean(sumr)
-		loss=loss+tf.reduce_mean(sumr)
-		self.error1=tf.reduce_mean(tf.to_float(tf.less(suml,1)))+tf.reduce_mean(tf.to_float(tf.less(sumr,1)))
-		self.error2=tf.reduce_mean(tf.to_float(tf.less(suml,2)))+tf.reduce_mean(tf.to_float(tf.less(sumr,2)))
-		self.error3=tf.reduce_mean(tf.to_float(tf.less(suml,2)))+tf.reduce_mean(tf.to_float(tf.less(sumr,2)))
+		#sumr=tf.abs(rpre-rground)
+		#loss=loss+tf.reduce_mean(sumr)
+		self.error1=tf.reduce_mean(tf.to_float(tf.less(suml,1)))
+		#+tf.reduce_mean(tf.to_float(tf.less(sumr,1)))
+		self.error2=tf.reduce_mean(tf.to_float(tf.less(suml,2)))
+		#+tf.reduce_mean(tf.to_float(tf.less(sumr,2)))
+		self.error3=tf.reduce_mean(tf.to_float(tf.less(suml,2)))
+		#+tf.reduce_mean(tf.to_float(tf.less(sumr,2)))
 		return loss
 	def _build_model(self):	
 		images=tf.split(self.image,num_or_size_splits=2, axis=1)
@@ -410,16 +382,20 @@ class E2EModel(object):
 			#rdisparities=tf.get_variable('rdisparity',[IMG_HEIGHT,IMG_WIDTH],tf.float32,initializer=tf.random_normal_initializer())
 		self.lpre=tf.reshape(ldisparities,[1,IMG_HEIGHT,IMG_WIDTH,1])/255
 		self.rpre=tf.reshape(rdisparities,[1,IMG_HEIGHT,IMG_WIDTH,1])/255
-		self.loss=self._loss(ldisparities,rdisparities)
+		side=np.random.random_integers(2)-1
+		if side==0:
+			self.loss=self._loss(ldisparities,side)
+		else:
+			self.loss=self._loss(rdisparities,side)
 		tf.summary.scalar('loss',self.loss)
 		tf.summary.scalar('error1',self.error1)
 		tf.summary.scalar('error2',self.error2)
 		tf.summary.scalar('error3',self.error3)
 	def _build_train_op(self):
 		"""Build training specific ops for the graph."""
-		with tf.device('/gpu:1'):
-			self.lrn_rate = tf.constant(0.0001, tf.float32)
-			tf.summary.scalar('learning_rate', self.lrn_rate)
+		#with tf.device('/gpu:0'):
+		self.lrn_rate = tf.constant(0.0001, tf.float32)
+		tf.summary.scalar('learning_rate', self.lrn_rate)
 		"""	
 			trainable_variables = tf.trainable_variables()
 			grads = gra_gpu.gradients(self.loss, trainable_variables)
@@ -427,49 +403,53 @@ class E2EModel(object):
 			self.var=trainable_variables
 		"""
 		#grads = tf.gradients(self.loss, trainable_variables)
+		"""
 		with tf.device('gpu:0'):
-			var0=tf.trainable_variables()[0:15]
-			grad0=tf.gradients(self.loss, var0,name='gradients')
+			var0=tf.trainable_variables()[:30]
+			grad0=tf.gradients(self.loss, var0,name='gradients0')
 		with tf.device('/gpu:1'):
-			var1=tf.trainable_variables()[15:30]
-			grad1=tf.gradients(self.loss, var1,name='gradients')
+			var1=tf.trainable_variables()[30:50]
+			grad1=tf.gradients(self.loss, var1,name='gradients1')
 		with tf.device('/gpu:2'):
-			var2=tf.trainable_variables()[30:80]
-			grad2=tf.gradients(self.loss, var2,name='gradients')
-		with tf.device('/gpu:3'):
-			var3=tf.trainable_variables()[80:]
-			grad3=tf.gradients(self.loss, var3,name='gradients')
+			var2=tf.trainable_variables()[50:80]
+			grad2=tf.gradients(self.loss, var2,name='gradients2')
+		"""
+		#with tf.device('/gpu:0'):
+		var3=tf.trainable_variables()
+		grad3=tf.gradients(self.loss, var3,name='gradients3')
 		"""
 		with tf.device('/gpu:3'):
 			var2=tf.trainable_variables()[90:96]
 			grad2=gra_gpu.gradients(self.loss, var2,name='gradients')
 			"""
-		with tf.device('/gpu:1'):
-			optimizer = tf.train.RMSPropOptimizer(
-				self.lrn_rate,
-				decay=0.9,
-				momentum=0.9,
-				epsilon=1.0)
-			apply_op0 = optimizer.apply_gradients(
-				zip(grad0, var0),
-				global_step=self.global_step, name='train_step0')
-			apply_op1 = optimizer.apply_gradients(
-				zip(grad1, var1),
-				global_step=self.global_step, name='train_step1')
-			apply_op2 = optimizer.apply_gradients(
-				zip(grad2, var2),
-				global_step=self.global_step, name='train_step2')
-			apply_op3 = optimizer.apply_gradients(
-				zip(grad3, var3),
-				global_step=self.global_step, name='train_step3')
-			"""
-			apply_op2 = optimizer.apply_gradients(
-				zip(grad2, var2),
-				global_step=self.global_step, name='train_step2')
-			"""
-			self.op=apply_op1
-			train_ops = [apply_op0]+[apply_op1]+[apply_op2] + [apply_op3] + self._extra_train_ops
-			self.train_op = tf.group(*train_ops)
+		#with tf.device('/gpu:0'):
+		optimizer = tf.train.RMSPropOptimizer(
+			self.lrn_rate,
+			decay=0.9,
+			momentum=0.0,
+			epsilon=1e-10)
+		"""
+		apply_op0 = optimizer.apply_gradients(
+			zip(grad0, var0),
+			global_step=self.global_step, name='train_step0')
+		apply_op1 = optimizer.apply_gradients(
+			zip(grad1, var1),
+			global_step=self.global_step, name='train_step1')
+		apply_op2 = optimizer.apply_gradients(
+			zip(grad2, var2),
+			global_step=self.global_step, name='train_step2')
+		"""
+		apply_op3 = optimizer.apply_gradients(
+			zip(grad3, var3),
+			global_step=self.global_step, name='train_step3')
+		"""
+		apply_op2 = optimizer.apply_gradients(
+			zip(grad2, var2),
+			global_step=self.global_step, name='train_step2')
+		"""
+		train_ops = [apply_op3]  + self._extra_train_ops
+		#train_ops = [apply_op0]+[apply_op1]+[apply_op2] + [apply_op3] + self._extra_train_ops
+		self.train_op = tf.group(*train_ops)
 
 
 

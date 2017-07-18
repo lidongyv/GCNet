@@ -52,9 +52,9 @@ if __name__ == '__main__':
  """
 
 def train():
-	with tf.device('/cpu:0'):
-		images,disparities,name=get_input(1) 
-	tf.device('/gpu:0')
+	#with tf.device('/cpu:0'):
+	images,disparities,name=get_input(1) 
+	#tf.device('/gpu:0')
 	#get input data
 	model=whole_model.E2EModel(images,disparities,'train')
 	model.build_graph()
@@ -77,6 +77,7 @@ def train():
 		"""Sets learning_rate based on global step."""
 
 		def begin(self):
+
 			self._lrn_rate = 0.0001
 
 		def before_run(self, run_context):
@@ -100,15 +101,23 @@ def train():
       chief_only_hooks=[summary_hook],
       # Since we provide a SummarySaverHook, we need to disable default
       # SummarySaverHook. To do that we set save_summaries_steps to 0.
-      save_summaries_steps=0,
+      save_summaries_steps=None,
+      save_checkpoint_secs=None,
       config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=True)) as mon_sess:
 		#print('running'+str(model.global_step))
 		while not mon_sess.should_stop():
-			mon_sess.run(model.op)
+			mon_sess.run(model.train_op)
 			steps=model.global_step.eval(session=mon_sess)
 			print('running'+str(steps))
 			if steps%100==0:
 				print('Now image comes to:'+str(name.eval(session=mon_sess).decode('UTF-8')))
+			"""
+			if setps>1 and model.save==1:
+				b_summary_op=tf.summary.merge([model.summaries,
+      							tf.summary.image('lpre',model.lpre,max_outputs=1),tf.summary.image('rpre',model.lpre,max_outputs=1)])
+				saver = tf.train.Saver(b_summary_op)	
+				saver.save(mon_sess,'best_model',global_step=steps)
+			"""
 			"""
 			print('model.var',len(model.var))
 			print('model.grad',len(model.grad))
@@ -150,7 +159,9 @@ def evaluate():
 	    coord.join(threads)
 train()
 """
-train()
+for d in ['/gpu:0','/gpu:1','/gpu:2', '/gpu:3']:
+	with tf.device(d):
+		train()
 
 	 
  

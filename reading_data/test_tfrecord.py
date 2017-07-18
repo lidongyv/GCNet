@@ -54,7 +54,7 @@ with tf.Session() as sess:
     # Retrieve a single instance:
     #image= images.eval()
     win = cv2.namedWindow('test win'+str(i), flags=0)
-    cv2.imshow('test win'+str(i), image.eval().astype(np.uint8))
+    cv2.imshow('test win'+str(i), label.eval().astype(np.uint8))
     cv2.waitKey()
          
     coord.request_stop()
