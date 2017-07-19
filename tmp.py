@@ -1,92 +1,66 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jun 30 11:17:51 2017
+import os
 
-@author: lidong
-"""
-import tensorflow as tf
-import time
 import numpy as np
-# Creates a graph.
-"""
-def _todisparity(volume):
-    with tf.device('/gpu:1'):
-        t2=time.time()
-        d=np.arange(192,dtype=np.float32)
-        d=np.reshape(d,[192,1,1])  
-        d=tf.convert_to_tensor(d)
-        disparities=tf.reshape(volume,[192,540,960])
-        probability=tf.nn.softmax(-disparities,dim=0)
-        #print('time:'+str(time.time()-t2))
-        sums=tf.reduce_sum(d*probability,0)
-        #print('time:'+str(time.time()-t2))
-        #t2=time.time()
-        
-        print('time:'+str(time.time()-t2))       
-    return sums
-t1=time.time()
-c=tf.constant([100,100],1)
-volume=tf.zeros([1,100,100,100,1])
-disparity=tf.ones([192,540,960])
-#a=_softargmin(disparity)
-b=_todisparity(disparity)
-#disparity=tf.range(1,1000000,1,dtype=tf.float32)
-#probability=tf.nn.softmax(disparity)
-init_op = tf.global_variables_initializer()
-with tf.Session() as sess:
-    print(time.time()-t1)
-    sess.run(init_op)
-    print(time.time()-t1)
-    print(b.shape)
-    print(time.time()-t1)
+import tensorflow as tf
+
+from tensorflow.python.platform import flags
+from tensorflow.python.platform import gfile
+import cv2
+
+import python_pfm
+#FLAGS=flags.FLAGS
+
+# Original image dimensions
+ORIGINAL_WIDTH = 960
+ORIGINAL_HEIGHT = 540
+COLOR_CHAN = 3
+
+# Default image dimensions.
+IMG_WIDTH = 256 
+IMG_HEIGHT = 512
+IMG_CHAN=1
+
+"""creat input data and ground truth data for network
+Args:
+    the mode is training or prediction
+Return:
+    three matrix for left images, right images, with the conresponding ground truth images
 """
 
-"""
-# Creates a session with log_device_placement set to True.
-tf.device('/gpu:0')
-volume=tf.zeros([1,96,270,480,64],dtype=tf.float16)
+#load a single converted tfrecords
+file=gfile.Glob(os.path.join(r'D:\SceneFlow','scene_flow_data_2.tfrecords'))
+data=tf.train.string_input_producer(file,shuffle=False)
+reader=tf.TFRecordReader()
+key,value=reader.read(data)
+features=tf.parse_single_example(
+    value,
+    features={
+    'image_left_raw':  tf.FixedLenFeature([], tf.string),
+    'image_right_raw': tf.FixedLenFeature([], tf.string),
+    'label_left_raw':  tf.FixedLenFeature([], tf.string),
+    'label_right_raw': tf.FixedLenFeature([], tf.string),
+    'name_raw':        tf.FixedLenFeature([], tf.string),                                
+  })
+#decode the data into image and disparity
+limage=tf.decode_raw(features['image_left_raw'],tf.uint8)
+rimage=tf.decode_raw(features['image_right_raw'],tf.uint8)
+ldisparity=tf.decode_raw(features['label_left_raw'],tf.float32)
+rdisparity=tf.decode_raw(features['label_right_raw'],tf.float32)
+name=features['name_raw']
+#reshape the data
+limage.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT*COLOR_CHAN)
+limage=tf.reshape(limage,[ORIGINAL_HEIGHT,ORIGINAL_WIDTH,COLOR_CHAN])
+limage=tf.to_float(limage)/255
+rimage.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT*COLOR_CHAN)
+rimage=tf.reshape(rimage,[ORIGINAL_HEIGHT,ORIGINAL_WIDTH,COLOR_CHAN])
+rimage=tf.to_float(rimage)/255
 
-#c=tf.zeros([1,192/2,540/2,960/2,64])
-#d=2*volume
-with tf.device('/gpu:0'):
-    lvolume=[]
-    single_dis=np.zeros([1,270,480,64],dtype=np.float32)
-    single_dis=tf.convert_to_tensor(single_dis)
-    for i in range(50):
-        #b=tf.split(single_dis,[240,240],2)
-        #a=tf.concat([b[0],b[1]],0)
-        lvolume.append(single_dis)
-    lvol=tf.stack(lvolume,axis=0)
-sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
-# Runs the op.
-print(sess.run(lvol))
-
-
-lvolume=[]
-for i in range(96):
-    single_dis=np.zeros([1,270,480,64],dtype=np.float32)
-    lvolume.append(single_dis)
-print(lvolume)
-""" 
-tf.device('/gpu:0')
-lvolume=[]
-single_dis=np.zeros([1,128,256,64],dtype=np.float32)
-single_dis=tf.convert_to_tensor(single_dis)
-for i in range(96):
-	splits=tf.split(single_dis,[256-i,i],axis=2)
-	rsplits=tf.concat([splits[1],splits[0]],axis=2)
-	single_dis2=tf.concat([single_dis,rsplits],3)
-	lvolume.append(single_dis2)
-lvol=tf.stack(lvolume,axis=0)
-rvolume=[]
-for i in range(96):
-	splits=tf.split(single_dis,[256-i,i],axis=2)
-	rsplits=tf.concat([splits[1],splits[0]],axis=2)
-	single_dis2=tf.concat([single_dis,rsplits],3)
-	rvolume.append(single_dis2)
-rvol=tf.stack(lvolume,axis=0)  
-sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
-# Runs the op.
-print(sess.run(lvol)) 
-sess.run(rvol)
-
+ldisparity.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT)
+ldisparity=tf.reshape(ldisparity,[ORIGINAL_HEIGHT,ORIGINAL_WIDTH,IMG_CHAN])
+rdisparity.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT)
+rdisparity=tf.reshape(rdisparity,[ORIGINAL_HEIGHT,ORIGINAL_WIDTH,IMG_CHAN])
+left=tf.concat([limage,ldisparity],axis=2)
+right=tf.concat([rimage,rdisparity],axis=2)
+left=tf.random_crop(left,[IMG_HEIGHT,IMG_WIDTH,4])
+right=tf.random_crop(right,[IMG_HEIGHT,IMG_WIDTH,4])
+[input_batch,disaprity_batch]=tf.train.shuffle_batch([[left[:,:,0:3],right[:,:,0:3]],[left[:,:,3],right[:,:,3]]],batch_size=1,capacity=2,num_threads=4,min_after_dequeue=1)

@@ -23,8 +23,8 @@ ORIGINAL_HEIGHT = 540
 COLOR_CHAN = 3
 
 # Default image dimensions.
-IMG_WIDTH = 256 
-IMG_HEIGHT = 512
+IMG_WIDTH = 512 
+IMG_HEIGHT = 256
 IMG_CHAN=1
 def get_input(mode=0):
     """creat input data and ground truth data for network
@@ -34,7 +34,7 @@ def get_input(mode=0):
     	three matrix for left images, right images, with the conresponding ground truth images
     """
     #load a single converted tfrecords
-    file=gfile.Glob(os.path.join(r'D:\SceneFlow','scene_flow_data_1.tfrecords'))
+    file=gfile.Glob(os.path.join(r'D:\SceneFlow','scene_flow_data_2.tfrecords'))
     data=tf.train.string_input_producer(file,shuffle=False)
     reader=tf.TFRecordReader()
     key,value=reader.read(data)
@@ -60,9 +60,9 @@ def get_input(mode=0):
     rimage.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT*COLOR_CHAN)
     rimage=tf.reshape(rimage,[ORIGINAL_HEIGHT,ORIGINAL_WIDTH,COLOR_CHAN])
     rimage=tf.to_float(rimage)/255
+
     ldisparity.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT)
     ldisparity=tf.reshape(ldisparity,[ORIGINAL_HEIGHT,ORIGINAL_WIDTH,IMG_CHAN])
-
     rdisparity.set_shape(ORIGINAL_WIDTH*ORIGINAL_HEIGHT)
     rdisparity=tf.reshape(rdisparity,[ORIGINAL_HEIGHT,ORIGINAL_WIDTH,IMG_CHAN])
     left=tf.concat([limage,ldisparity],axis=2)
@@ -71,12 +71,3 @@ def get_input(mode=0):
     right=tf.random_crop(right,[IMG_HEIGHT,IMG_WIDTH,4])
     [input_batch,disaprity_batch]=tf.train.shuffle_batch([[left[:,:,0:3],right[:,:,0:3]],[left[:,:,3],right[:,:,3]]],batch_size=1,capacity=2,num_threads=4,min_after_dequeue=1)
     return input_batch,disaprity_batch,name
-    
-    
-
-
-
-
-
-
-    

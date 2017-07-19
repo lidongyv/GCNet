@@ -26,6 +26,8 @@ DATA_DIR = 'push/push_train'
 
 # local output directory
 OUT_DIR = '/tmp/data'
+IMG_WIDTH = 512 
+IMG_HEIGHT = 256
 """
 FLAGS = flags.FLAGS
 
@@ -58,12 +60,18 @@ def train():
 	#get input data
 	model=whole_model.E2EModel(images,disparities,'train')
 	model.build_graph()
-
-
+	images_s=tf.split(images,num_or_size_splits=2,axis=1)
+	limg_s=tf.reshape(images_s,[1,IMG_HEIGHT,IMG_WIDTH,3])
+	rimg_s=tf.reshape(images_s,[1,IMG_HEIGHT,IMG_WIDTH,3])
+	ground=tf.split(disparities,num_or_size_splits=2,axis=1)
+	lground=tf.reshape(ground[0],[1,IMG_HEIGHT,IMG_WIDTH,1])
+	rground=tf.reshape(ground[1],[1,IMG_HEIGHT,IMG_WIDTH,1])
 	summary_hook = tf.train.SummarySaverHook(
       save_steps=100,
       output_dir=r'D:\GC-Base\log\output',
       summary_op=tf.summary.merge([model.summaries,
+      							tf.summary.image('oril',lground/255,max_outputs=1),tf.summary.image('orir',rground/255,max_outputs=1),
+      							tf.summary.image('limg_s',limg_s,max_outputs=3),tf.summary.image('rimg_s',rimg_s,max_outputs=3),
       							tf.summary.image('lpre',model.lpre,max_outputs=1),tf.summary.image('rpre',model.lpre,max_outputs=1)]))
 	logging_hook = tf.train.LoggingTensorHook(
       tensors={'step': model.global_step,
@@ -102,7 +110,6 @@ def train():
       # Since we provide a SummarySaverHook, we need to disable default
       # SummarySaverHook. To do that we set save_summaries_steps to 0.
       save_summaries_steps=None,
-      save_checkpoint_secs=None,
       config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=True)) as mon_sess:
 		#print('running'+str(model.global_step))
 		while not mon_sess.should_stop():
