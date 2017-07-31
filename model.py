@@ -14,7 +14,7 @@ from tensorflow.python.platform import flags
 from tensorflow.python.training import moving_averages
 
 
-IMG_WIDTH = 512 
+IMG_WIDTH = 512
 IMG_HEIGHT = 256
 IMG_DISPARITY = 192
 

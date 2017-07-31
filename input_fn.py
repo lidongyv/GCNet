@@ -34,7 +34,7 @@ def get_input(mode=0):
     	three matrix for left images, right images, with the conresponding ground truth images
     """
     #load a single converted tfrecords
-    file=gfile.Glob(os.path.join(r'D:\SceneFlow','scene_flow_data_2.tfrecords'))
+    file=gfile.Glob(os.path.join(r'D:\SceneFlow','scene_flow_data_1.tfrecords'))
     data=tf.train.string_input_producer(file,shuffle=False)
     reader=tf.TFRecordReader()
     key,value=reader.read(data)
@@ -67,7 +67,10 @@ def get_input(mode=0):
     rdisparity=tf.reshape(rdisparity,[ORIGINAL_HEIGHT,ORIGINAL_WIDTH,IMG_CHAN])
     left=tf.concat([limage,ldisparity],axis=2)
     right=tf.concat([rimage,rdisparity],axis=2)
-    left=tf.random_crop(left,[IMG_HEIGHT,IMG_WIDTH,4])
-    right=tf.random_crop(right,[IMG_HEIGHT,IMG_WIDTH,4])
-    [input_batch,disaprity_batch]=tf.train.shuffle_batch([[left[:,:,0:3],right[:,:,0:3]],[left[:,:,3],right[:,:,3]]],batch_size=1,capacity=2,num_threads=4,min_after_dequeue=1)
+    data=tf.concat([left,right],axis=2)
+    data=tf.random_crop(data,[IMG_HEIGHT,IMG_WIDTH,8])
+    data=tf.split(data,num_or_size_splits=2,axis=2)
+    left=data[0]
+    right=data[1]
+    [input_batch,disaprity_batch]=tf.train.shuffle_batch([[left[:,:,0:3],right[:,:,0:3]],[left[:,:,3],right[:,:,3]]],batch_size=1,capacity=4,num_threads=4,min_after_dequeue=1)
     return input_batch,disaprity_batch,name
