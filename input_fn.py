@@ -24,9 +24,9 @@ COLOR_CHAN = 3
 
 # Default image dimensions.
 IMG_WIDTH = 512 
-IMG_HEIGHT = 256
+IMG_HEIGHT =256
 IMG_CHAN=1
-def get_input(mode=0):
+def get_input(mode=0,data='scene'):
     """creat input data and ground truth data for network
     Args:
     	the mode is training or prediction
@@ -34,7 +34,32 @@ def get_input(mode=0):
     	three matrix for left images, right images, with the conresponding ground truth images
     """
     #load a single converted tfrecords
-    file=gfile.Glob(os.path.join(r'D:\SceneFlow\train','scene_flow_data_1.tfrecords'))
+    if data=='scene':
+        ORIGINAL_WIDTH = 960
+        ORIGINAL_HEIGHT = 540
+        COLOR_CHAN = 3
+
+        # Default image dimensions.
+        IMG_WIDTH = 512
+        IMG_HEIGHT = 256
+        IMG_CHAN=1
+        if mode==0:
+            file=gfile.Glob(os.path.join(r'D:\SceneFlow\train','*'))
+        else:
+            file=gfile.Glob(os.path.join(r'D:\SceneFlow\test','*'))
+    else:
+        ORIGINAL_WIDTH = 1242
+        ORIGINAL_HEIGHT = 375
+        COLOR_CHAN = 3
+
+        # Default image dimensions.
+        IMG_WIDTH = 1242 
+        IMG_HEIGHT = 375
+        IMG_CHAN=1
+        if mode==0:
+            file=gfile.Glob(os.path.join(r'D:\KITTI2015','KITTI2015_train.tfrecords'))
+        else:
+            file=gfile.Glob(os.path.join(r'D:\KITTI2015','KITTI2015_testing.tfrecords'))
     data=tf.train.string_input_producer(file,shuffle=False)
     reader=tf.TFRecordReader()
     key,value=reader.read(data)

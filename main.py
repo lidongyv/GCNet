@@ -21,12 +21,8 @@ VAL_INTERVAL = 200
 # How often to save a model checkpoint
 SAVE_INTERVAL = 2000 
 
-# tf record data location:
-DATA_DIR = 'push/push_train'
 
-# local output directory
-OUT_DIR = '/tmp/data'
-IMG_WIDTH = 512 
+IMG_WIDTH = 512
 IMG_HEIGHT = 256
 """
 FLAGS = flags.FLAGS
@@ -53,7 +49,7 @@ if __name__ == '__main__':
   app.run()
  """
 
-def train():
+def train(data='scene'):
 	#with tf.device('/cpu:0'):
 	images,disparities,name=get_input(1) 
 	#tf.device('/gpu:0')
@@ -115,7 +111,8 @@ def train():
 		while not mon_sess.should_stop():
 			mon_sess.run(model.train_op)
 			steps=model.global_step.eval(session=mon_sess)
-			print('running'+str(steps))
+			loss=model.loss.eval(session=mon_sess)
+			print('running'+str(steps)+'loss:'+str(loss))
 			if steps%100==0:
 				print('Now image comes to:'+str(name.eval(session=mon_sess).decode('UTF-8')))
 			"""
@@ -166,9 +163,24 @@ def evaluate():
 	    coord.join(threads)
 train()
 """
-for d in ['/gpu:0','/gpu:1','/gpu:2', '/gpu:3']:
-	with tf.device(d):
-		train()
+def main(_):
+	parser = argparse.ArgumentParser(description="tmp main for test without flags")
+	parser.add_argument('--mode', default='train',
+                      help='train or test')
+	parser.add_argument('--data', default='scene',
+                      help='scene or kitti')
+	args = parser.parse_args()
+	if args.mode == 'test':
+		with tf.device('/gpu:0'):
+			print('test')
+			evaluate(args.data)
+	else:
+		with tf.device('/gpu:0'):
+			print('train')
+			train(args.data)
+if __name__ == '__main__':
+	tf.app.run()
+ 
 
 	 
  

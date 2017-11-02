@@ -1,1 +1,1 @@
-activate tensorflownew&&set CUDA_VISIBLE_DEVICES=0&&python main.py --mode train
+activate tensorflownew&&set CUDA_VISIBLE_DEVICES=0,1&&python main.py --mode train

@@ -14,7 +14,7 @@ from tensorflow.python.platform import flags
 from tensorflow.python.training import moving_averages
 
 
-IMG_WIDTH = 512
+IMG_WIDTH = 512 
 IMG_HEIGHT = 256
 IMG_DISPARITY = 192
 
@@ -414,42 +414,42 @@ class E2EModel(object):
 			var2=tf.trainable_variables()[50:80]
 			grad2=tf.gradients(self.loss, var2,name='gradients2')
 		"""
-		#with tf.device('/gpu:0'):
-		var3=tf.trainable_variables()
-		grad3=tf.gradients(self.loss, var3,name='gradients3')
-		"""
-		with tf.device('/gpu:3'):
-			var2=tf.trainable_variables()[90:96]
-			grad2=gra_gpu.gradients(self.loss, var2,name='gradients')
+		with tf.device('/gpu:1'):
+			var3=tf.trainable_variables()
+			grad3=tf.gradients(self.loss, var3,name='gradients3')
 			"""
-		#with tf.device('/gpu:0'):
-		optimizer = tf.train.RMSPropOptimizer(
-			self.lrn_rate,
-			decay=0.9,
-			momentum=0.0,
-			epsilon=1e-10)
-		"""
-		apply_op0 = optimizer.apply_gradients(
-			zip(grad0, var0),
-			global_step=self.global_step, name='train_step0')
-		apply_op1 = optimizer.apply_gradients(
-			zip(grad1, var1),
-			global_step=self.global_step, name='train_step1')
-		apply_op2 = optimizer.apply_gradients(
-			zip(grad2, var2),
-			global_step=self.global_step, name='train_step2')
-		"""
-		apply_op3 = optimizer.apply_gradients(
-			zip(grad3, var3),
-			global_step=self.global_step, name='train_step3')
-		"""
-		apply_op2 = optimizer.apply_gradients(
-			zip(grad2, var2),
-			global_step=self.global_step, name='train_step2')
-		"""
-		train_ops = [apply_op3]  + self._extra_train_ops
-		#train_ops = [apply_op0]+[apply_op1]+[apply_op2] + [apply_op3] + self._extra_train_ops
-		self.train_op = tf.group(*train_ops)
+			with tf.device('/gpu:3'):
+				var2=tf.trainable_variables()[90:96]
+				grad2=gra_gpu.gradients(self.loss, var2,name='gradients')
+				"""
+			#with tf.device('/gpu:0'):
+			optimizer = tf.train.RMSPropOptimizer(
+				self.lrn_rate,
+				decay=0.9,
+				momentum=0.0,
+				epsilon=1e-10)
+			"""
+			apply_op0 = optimizer.apply_gradients(
+				zip(grad0, var0),
+				global_step=self.global_step, name='train_step0')
+			apply_op1 = optimizer.apply_gradients(
+				zip(grad1, var1),
+				global_step=self.global_step, name='train_step1')
+			apply_op2 = optimizer.apply_gradients(
+				zip(grad2, var2),
+				global_step=self.global_step, name='train_step2')
+			"""
+			apply_op3 = optimizer.apply_gradients(
+				zip(grad3, var3),
+				global_step=self.global_step, name='train_step3')
+			"""
+			apply_op2 = optimizer.apply_gradients(
+				zip(grad2, var2),
+				global_step=self.global_step, name='train_step2')
+			"""
+			train_ops = [apply_op3]  + self._extra_train_ops
+			#train_ops = [apply_op0]+[apply_op1]+[apply_op2] + [apply_op3] + self._extra_train_ops
+			self.train_op = tf.group(*train_ops)
 
 
 
